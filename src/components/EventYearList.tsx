@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import type { EventYear } from '../types';
+import { exportBackup, importBackup } from '../utils/dbBackup';
 import './EventYearList.css';
 
 interface Props {
@@ -13,6 +14,29 @@ export default function EventYearList({ onSelectYear }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
+  const [backupState, setBackupState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleExport() {
+    setBackupState('working');
+    try {
+      await exportBackup();
+      setBackupState('done');
+    } catch { setBackupState('error'); }
+    setTimeout(() => setBackupState('idle'), 2500);
+  }
+
+  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackupState('working');
+    try {
+      await importBackup(file);
+      setBackupState('done');
+    } catch { setBackupState('error'); }
+    setTimeout(() => setBackupState('idle'), 2500);
+    e.target.value = '';
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -51,9 +75,18 @@ export default function EventYearList({ onSelectYear }: Props) {
       <main className="year-list-main">
         <div className="year-list-top">
           <h2>Event Years</h2>
-          <button className="btn-primary" onClick={() => setShowForm(true)}>
-            + New Year
-          </button>
+          <div className="year-list-actions">
+            <button className="btn-secondary" onClick={handleExport} disabled={backupState === 'working'}>
+              {backupState === 'working' ? 'Exporting…' : backupState === 'done' ? 'Saved!' : backupState === 'error' ? 'Error' : 'Export backup'}
+            </button>
+            <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={backupState === 'working'}>
+              {backupState === 'working' ? 'Importing…' : backupState === 'done' ? 'Done!' : backupState === 'error' ? 'Error' : 'Import backup'}
+            </button>
+            <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+            <button className="btn-primary" onClick={() => setShowForm(true)}>
+              + New Year
+            </button>
+          </div>
         </div>
 
         {showForm && (

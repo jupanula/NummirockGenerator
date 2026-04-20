@@ -49,6 +49,12 @@
   font-weight: 600;
 }
 
+.year-list-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .year-form {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
