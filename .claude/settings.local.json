@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node -e \"require\\('./node_modules/svg2pdf.js/dist/svg2pdf.umd.js'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(timeout 60 npx vite build)",
+      "Bash(npx vite *)"
+    ]
+  }
+}

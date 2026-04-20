@@ -1,0 +1,82 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.workspace-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+}
+
+.workspace-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  min-height: 56px;
+  flex-shrink: 0;
+}
+
+.workspace-back {
+  font-size: 13px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.workspace-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex: 1;
+}
+
+.workspace-year {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.workspace-name {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.workspace-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.workspace-tab {
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+
+.workspace-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.workspace-tab.active {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-tertiary);
+}
+
+.workspace-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
