@@ -23,7 +23,7 @@ function DesignCard({
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!design.thumbnailBlob) return;
+    if (!(design.thumbnailBlob instanceof Blob)) return;
     const url = URL.createObjectURL(design.thumbnailBlob);
     setThumbUrl(url);
     return () => URL.revokeObjectURL(url);

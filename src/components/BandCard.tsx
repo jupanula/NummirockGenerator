@@ -32,7 +32,7 @@ export default function BandCard({ band, onEdit, onDelete }: Props) {
 
   useEffect(() => {
     let url: string;
-    if (band.photoBlob) {
+    if (band.photoBlob instanceof Blob) {
       url = URL.createObjectURL(band.photoBlob);
       setPhotoUrl(url);
     }
@@ -41,7 +41,7 @@ export default function BandCard({ band, onEdit, onDelete }: Props) {
 
   useEffect(() => {
     let url: string;
-    if (band.logoBlob) {
+    if (band.logoBlob instanceof Blob) {
       url = URL.createObjectURL(band.logoBlob);
       setLogoUrl(url);
     }
