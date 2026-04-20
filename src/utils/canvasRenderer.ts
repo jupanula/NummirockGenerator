@@ -143,23 +143,6 @@ export async function generateCompositeBlob(
 
 // ── Row distribution helpers ─────────────────────────────────────────────────
 
-// Even distribution: 7 bands / max-3 → [3,2,2] not [3,3,1]
-function chunkBalanced<T>(arr: T[], maxSize: number): T[][] {
-  if (arr.length === 0) return [];
-  const s = Math.max(1, maxSize);
-  const numRows = Math.ceil(arr.length / s);
-  const base = Math.floor(arr.length / numRows);
-  const extra = arr.length % numRows;
-  const chunks: T[][] = [];
-  let offset = 0;
-  for (let i = 0; i < numRows; i++) {
-    const size = i < extra ? base + 1 : base;
-    chunks.push(arr.slice(offset, offset + size));
-    offset += size;
-  }
-  return chunks;
-}
-
 // Continuous horizontal scale for band names based on character length.
 // Short names render wider (up to 125%), long names narrower (down to 65%).
 // The "neutral" point (~100%) is around 12 characters.
