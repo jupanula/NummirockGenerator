@@ -18,6 +18,7 @@ async function ensureFontLoaded(): Promise<void> {
 }
 
 function blobToImage(blob: Blob): Promise<HTMLImageElement> {
+  if (!(blob instanceof Blob)) return Promise.reject(new Error('not a Blob'));
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const img = new Image();
