@@ -26,6 +26,23 @@
   color: var(--text-secondary);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  flex: 1;
+}
+
+.year-list-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.auto-backup-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.auto-backup-setup {
+  font-size: 12px;
+  padding: 5px 10px;
 }
 
 .year-list-main {

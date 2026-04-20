@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import type { EventYear } from '../types';
 import { exportBackup, importBackup } from '../utils/dbBackup';
+import { setupBackupFolder, isBackupConfigured } from '../utils/autoBackup';
 import './EventYearList.css';
 
 interface Props {
@@ -15,7 +16,12 @@ export default function EventYearList({ onSelectYear }: Props) {
   const [name, setName] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [backupState, setBackupState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
+  const [autoBackupReady, setAutoBackupReady] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    isBackupConfigured().then(setAutoBackupReady);
+  }, []);
 
   async function handleExport() {
     setBackupState('working');
@@ -24,6 +30,11 @@ export default function EventYearList({ onSelectYear }: Props) {
       setBackupState('done');
     } catch { setBackupState('error'); }
     setTimeout(() => setBackupState('idle'), 2500);
+  }
+
+  async function handleSetupAutoBackup() {
+    const ok = await setupBackupFolder();
+    if (ok) setAutoBackupReady(true);
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -70,6 +81,12 @@ export default function EventYearList({ onSelectYear }: Props) {
           <img src="./assets/Nummirock-logo.svg" alt="Nummirock" />
         </div>
         <h1>Generator</h1>
+        <div className="year-list-header-right">
+          {autoBackupReady
+            ? <span className="auto-backup-status">Auto-backup on</span>
+            : <button className="btn-ghost auto-backup-setup" onClick={handleSetupAutoBackup}>Set up auto-backup</button>
+          }
+        </div>
       </header>
 
       <main className="year-list-main">

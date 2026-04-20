@@ -39,7 +39,7 @@ interface BackupFile {
 
 // ── Export ───────────────────────────────────────────────────────────────────
 
-export async function exportBackup(): Promise<void> {
+export async function createBackupJSON(): Promise<string> {
   const [eventYears, bands, designs] = await Promise.all([
     db.eventYears.toArray(),
     db.bands.toArray(),
@@ -66,13 +66,17 @@ export async function exportBackup(): Promise<void> {
     designs,
   };
 
-  const json = JSON.stringify(backup);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  const date = new Date().toISOString().slice(0, 10);
-  a.href     = url;
-  a.download = `nummirock-backup-${date}.json`;
+  return JSON.stringify(backup);
+}
+
+export async function exportBackup(): Promise<void> {
+  const json  = await createBackupJSON();
+  const blob  = new Blob([json], { type: 'application/json' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  const date  = new Date().toISOString().slice(0, 10);
+  a.href      = url;
+  a.download  = `nummirock-backup-${date}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }

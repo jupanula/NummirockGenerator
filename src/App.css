@@ -5,3 +5,84 @@
   overflow: hidden;
   background: var(--bg-primary);
 }
+
+.restore-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.restore-box {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  max-width: 480px;
+  width: 90%;
+}
+
+.restore-box h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.restore-box p {
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.restore-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.restore-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.restore-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  width: 100%;
+}
+
+.restore-item:hover {
+  border-color: var(--border-focus);
+  background: var(--bg-hover);
+}
+
+.restore-item-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.restore-item-name {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.restore-success {
+  color: var(--accent) !important;
+  font-weight: 600;
+  text-align: center;
+}
