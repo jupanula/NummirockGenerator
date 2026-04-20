@@ -283,12 +283,14 @@ export function calculateDesignLayout(design: Design, bands: Band[]): DesignLayo
   const photoGapBelow = design.photoGapBelow ?? design.gapV;
   const logoGapBelow  = design.logoGapBelow  ?? design.gapV;
 
-  const photoRowGapClamped = Math.max(0, photoRowGapV);
+  // photoRowGapV is a % of each row's own height (-100 = full overlap, +200 = 2× height gap)
+  const photoRowGapRatio = photoRowGapV / 100;
   const logoRowGapClamped  = Math.max(0, logoRowGapV);
   const nameRowGapClamped  = Math.max(0, nameRowGapV);
 
   const photoSectionH = photoRowHeights.reduce((a, b) => a + b, 0)
-    + Math.max(0, photoRows.length - 1) * photoRowGapClamped;
+    + photoRows.slice(0, -1).reduce((sum, _, i) =>
+        sum + Math.max(0, photoRowGapRatio * photoRowHeights[i]), 0);
 
   // Total inter-section gap subtracted from the logo/name budget (clamped to ≥0 for sizing).
   const photoToNextGap = (photoRows.length > 0 && (logoRows.length > 0 || nameRows.length > 0))
@@ -322,7 +324,7 @@ export function calculateDesignLayout(design: Design, bands: Band[]): DesignLayo
     const h = photoRowHeights[i];
     rows.push({ type: 'photo', bands: photoRows[i], y, h });
     sectionMaxBottom = Math.max(sectionMaxBottom, y + h);
-    y += h + (i < photoRows.length - 1 ? photoRowGapV : 0);
+    y += h + (i < photoRows.length - 1 ? photoRowGapRatio * h : 0);
   }
   if (photoRows.length > 0 && (logoRows.length > 0 || nameRows.length > 0)) {
     y = sectionMaxBottom + photoGapBelow;

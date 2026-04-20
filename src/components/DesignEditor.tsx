@@ -396,7 +396,7 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
                 onChange={e => setPhotoMarginH(Number(e.target.value))} />
             </div>
             <div className="field">
-              <label>Gap between rows — {photoRowGapV}px</label>
+              <label>Gap between rows — {photoRowGapV}%</label>
               <input type="range" min={-100} max={200} step={1} value={photoRowGapV}
                 onChange={e => setPhotoRowGapV(Number(e.target.value))} />
             </div>

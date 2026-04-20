@@ -19,7 +19,7 @@ function scaleDesign(design: Design, scale: number): Design {
     photoGapBelow: (design.photoGapBelow ?? design.gapV) * scale,
     logoGapBelow:  (design.logoGapBelow  ?? design.gapV) * scale,
     photoMarginH:  (design.photoMarginH  ?? design.gapH) * scale,
-    photoRowGapV: (design.photoRowGapV ?? design.gapV) * scale,
+    photoRowGapV: design.photoRowGapV ?? design.gapV, // ratio (%), not pixels — no scaling
     photoHGap:    (design.photoHGap    ?? design.gapH) * scale,
     logoMarginH:  (design.logoMarginH  ?? design.gapH) * scale,
     logoRowGapV:  (design.logoRowGapV  ?? design.gapV) * scale,
