@@ -13,7 +13,7 @@ declare global {
 }
 
 const MAX_BACKUPS = 5;
-const BACKUP_PREFIX = 'nummirock-auto-';
+const BACKUP_PREFIX = 'nummirock-backup-';
 const HANDLE_KEY = 'backupDirHandle';
 
 async function storeHandle(handle: FileSystemDirectoryHandle): Promise<void> {

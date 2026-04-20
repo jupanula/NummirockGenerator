@@ -74,9 +74,9 @@ export async function exportBackup(): Promise<void> {
   const blob  = new Blob([json], { type: 'application/json' });
   const url   = URL.createObjectURL(blob);
   const a     = document.createElement('a');
-  const date  = new Date().toISOString().slice(0, 10);
+  const ts    = new Date().toISOString().replace(/:/g, '-').slice(0, 19);
   a.href      = url;
-  a.download  = `nummirock-backup-${date}.json`;
+  a.download  = `nummirock-backup-${ts}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
