@@ -96,7 +96,6 @@
   max-width: 90%;
   max-height: 80px;
   object-fit: contain;
-  filter: invert(1);
 }
 
 .file-preview-photo {

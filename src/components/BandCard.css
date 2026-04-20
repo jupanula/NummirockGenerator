@@ -67,7 +67,6 @@
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  filter: invert(1);
 }
 
 .thumb-placeholder {

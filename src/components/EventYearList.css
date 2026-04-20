@@ -17,7 +17,6 @@
 .year-list-header img {
   height: 40px;
   width: auto;
-  filter: invert(1);
 }
 
 .year-list-header h1 {
