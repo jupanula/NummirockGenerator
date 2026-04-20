@@ -160,6 +160,47 @@ function chunkBalanced<T>(arr: T[], maxSize: number): T[][] {
   return chunks;
 }
 
+// Continuous horizontal scale for band names based on character length.
+// Short names render wider (up to 125%), long names narrower (down to 65%).
+// The "neutral" point (~100%) is around 12 characters.
+const NAME_SCALE_SHORT_LEN = 4, NAME_SCALE_LONG_LEN = 25;
+const NAME_SCALE_MAX_DEFAULT = 1.25, NAME_SCALE_MIN_DEFAULT = 0.65;
+
+function nameXScale(name: string, min = NAME_SCALE_MIN_DEFAULT, max = NAME_SCALE_MAX_DEFAULT): number {
+  const t = Math.max(0, Math.min(1,
+    (name.length - NAME_SCALE_SHORT_LEN) / (NAME_SCALE_LONG_LEN - NAME_SCALE_SHORT_LEN)
+  ));
+  return max + t * (min - max);
+}
+
+function distributeNameRows(bands: Band[], perRow: number, minScale = NAME_SCALE_MIN_DEFAULT, maxScale = NAME_SCALE_MAX_DEFAULT): Band[][] {
+  if (bands.length === 0) return [];
+
+  // "perRow" is advisory: it determines the number of rows, but bands are distributed
+  // by actual rendered width so every row ends up with similar total content width,
+  // giving consistent inter-band spacing regardless of name length.
+  const numRows   = Math.max(1, Math.round(bands.length / Math.max(1, perRow)));
+  const widths    = bands.map(b => b.name.length * nameXScale(b.name, minScale, maxScale));
+  const totalW    = widths.reduce((a, b) => a + b, 0);
+  const targetW   = totalW / numRows;
+
+  const rows: Band[][] = [];
+  let cur: Band[]      = [];
+  let curW             = 0;
+
+  for (let i = 0; i < bands.length; i++) {
+    if (cur.length > 0 && rows.length < numRows - 1 && curW + widths[i] > targetW) {
+      rows.push(cur);
+      cur  = [];
+      curW = 0;
+    }
+    cur.push(bands[i]);
+    curW += widths[i];
+  }
+  if (cur.length > 0) rows.push(cur);
+  return rows;
+}
+
 // Ascending distribution: row i gets firstRowSize + i*growth logos (rounded).
 // growth=1 → +1 per row, growth=0 → uniform, growth=0.5 → +1 every two rows.
 function distributeAscending(bands: Band[], firstRowSize: number, growth: number): Band[][] {
@@ -221,7 +262,9 @@ export function calculateDesignLayout(design: Design, bands: Band[]): DesignLayo
 
   const photoRows = distributeAscending(photoBands, design.photoRowSize, design.photoGrowth ?? 1);
   const logoRows  = buildLogoRows(logoBands, design.logoRowSize, design.logoGrowth ?? 1);
-  const nameRows  = design.nameRowSize > 0 ? chunkBalanced(nameBands, design.nameRowSize) : [];
+  const nameWidthMin = (design.nameWidthMin ?? 65) / 100;
+  const nameWidthMax = (design.nameWidthMax ?? 125) / 100;
+  const nameRows  = design.nameRowSize > 0 ? distributeNameRows(nameBands, design.nameRowSize, nameWidthMin, nameWidthMax) : [];
 
   // Per-section margins and row gaps (fall back to legacy gapH / gapV for old designs).
   const photoMarginH = design.photoMarginH ?? design.gapH;
@@ -341,7 +384,8 @@ export async function calculateLogoRowPositions(
   canvasW: number,
   logoHGap: number,
   logoVPadPct: number,
-  outerMargin = 0
+  outerMargin = 0,
+  logoNorm = 1.0
 ): Promise<LogoFlowItem[]> {
   const vPad  = rowH * (logoVPadPct / 100);
   const availH = rowH - vPad * 2;
@@ -354,11 +398,14 @@ export async function calculateLogoRowPositions(
     catch { return 3.0; }
   }));
 
-  // Geometric-mean normalisation: narrow logos get proportionally taller.
-  // width = availH × √AR,  height = availH / √AR
-  const sqrtARs        = aspectRatios.map(ar => Math.sqrt(Math.max(0.01, ar)));
-  const naturalWidths  = sqrtARs.map(s => availH * s);
-  const naturalHeights = sqrtARs.map(s => availH / s);
+  // Logo normalisation: blend between uniform width (norm=0) and geometric-mean AR (norm=1).
+  // Values >1 amplify the size differences further.
+  const normFactors    = aspectRatios.map(ar => {
+    const sqrt = Math.sqrt(Math.max(0.01, ar));
+    return 1.0 + (sqrt - 1.0) * logoNorm;
+  });
+  const naturalWidths  = normFactors.map(f => availH * f);
+  const naturalHeights = normFactors.map(f => availH / Math.max(0.01, f));
   const totalContentW  = naturalWidths.reduce((a, b) => a + b, 0);
   const totalW         = totalContentW + Math.max(0, n - 1) * logoHGap;
   const availW         = canvasW - 2 * outerMargin;
@@ -413,9 +460,9 @@ async function renderPhotoLogoRow(
 async function renderLogoOnlyRow(
   ctx: CanvasRenderingContext2D,
   bands: Band[], y: number, rowH: number, canvasW: number,
-  logoHGap: number, logoVPadPct: number, outerMargin = 0
+  logoHGap: number, logoVPadPct: number, outerMargin = 0, logoNorm = 1.0
 ) {
-  const positions = await calculateLogoRowPositions(bands, y, rowH, canvasW, logoHGap, logoVPadPct, outerMargin);
+  const positions = await calculateLogoRowPositions(bands, y, rowH, canvasW, logoHGap, logoVPadPct, outerMargin, logoNorm);
 
   for (const { band, x, y: ly, w: lw, h: lh } of positions) {
     if (band.logoBlob) {
@@ -437,7 +484,9 @@ async function renderNameRow(
   ctx: CanvasRenderingContext2D,
   bands: Band[], y: number, rowH: number, canvasW: number, gapH: number,
   separatorColor: string, separatorChar: string, nameTextColor: string,
-  nameFontScale: number
+  nameFontScale: number,
+  nameWidthMin = NAME_SCALE_MIN_DEFAULT,
+  nameWidthMax = NAME_SCALE_MAX_DEFAULT
 ) {
   const N = bands.length;
   if (N === 0) return;
@@ -449,18 +498,26 @@ async function renderNameRow(
   ctx.textAlign = 'left';
 
   const sep        = separatorChar || '■';
-  const nameWidths = bands.map(b => ctx.measureText(b.name.toUpperCase()).width);
+  const xScales    = bands.map(b => nameXScale(b.name, nameWidthMin, nameWidthMax));
+  const nameWidths = bands.map((b, i) => ctx.measureText(b.name.toUpperCase()).width * xScales[i]);
   const sepWidth   = ctx.measureText(sep).width;
   const cy         = y + rowH / 2;
 
-  // Justify: stretch gaps so the row fills canvasW − 2×gapH.
-  const availW = canvasW - 2 * gapH;
-  const fixedW = nameWidths.reduce((a, b) => a + b, 0) + (N - 1) * sepWidth;
+  // Justify when content fills ≥60% of available width; otherwise centre with a
+  // comfortable fixed gap so a sparse row doesn't sprawl across the full canvas.
+  const availW  = canvasW - 2 * gapH;
+  const namesW  = nameWidths.reduce((a, b) => a + b, 0);
+  const fixedW  = namesW + (N - 1) * sepWidth;
+  const comfort = fontSize * 0.45;
 
   let startX: number, sepGap: number;
   if (N === 1 || fixedW >= availW) {
-    sepGap = fontSize * 0.45;
+    sepGap = comfort;
     startX = (canvasW - (fixedW + Math.max(0, N - 1) * sepGap * 2)) / 2;
+  } else if (fixedW < availW * 0.6) {
+    // Sparse row: centre with a comfortable fixed gap matching a full row's feel
+    sepGap = comfort;
+    startX = (canvasW - (fixedW + (N - 1) * sepGap * 2)) / 2;
   } else {
     sepGap = (availW - fixedW) / (2 * (N - 1));
     startX = gapH;
@@ -470,7 +527,15 @@ async function renderNameRow(
   for (let i = 0; i < N; i++) {
     ctx.fillStyle = nameTextColor || '#ffffff';
     ctx.font = fontStr;
-    ctx.fillText(bands[i].name.toUpperCase(), cx, cy);
+    if (xScales[i] !== 1.0) {
+      ctx.save();
+      ctx.translate(cx, 0);
+      ctx.scale(xScales[i], 1);
+      ctx.fillText(bands[i].name.toUpperCase(), 0, cy);
+      ctx.restore();
+    } else {
+      ctx.fillText(bands[i].name.toUpperCase(), cx, cy);
+    }
     cx += nameWidths[i];
     if (i < N - 1) {
       cx += sepGap;
@@ -495,8 +560,11 @@ export async function renderDesignToCanvas(
 ): Promise<void> {
   const { design, bands, eventYear, transparent = false, skipLogoOnlyRows = false } = config;
   const nameFontScale = design.nameFontScale  ?? 1.0;
+  const nameWidthMin  = (design.nameWidthMin  ?? 65)  / 100;
+  const nameWidthMax  = (design.nameWidthMax  ?? 125) / 100;
   const logoHGap      = design.logoHGap       ?? 24;
   const logoVPadPct   = design.logoVPadPct    ?? 8;
+  const logoNorm      = (design.logoNorm      ?? 100) / 100;
   const photoHGap     = design.photoHGap      ?? design.gapH;
   const photoScale    = design.photoScale     ?? 1.0;
 
@@ -520,13 +588,13 @@ export async function renderDesignToCanvas(
       await renderPhotoLogoRow(ctx, row.bands, row.y, row.h, offscreen.width, layout.photoMarginH, photoHGap, photoScale);
     } else if (row.type === 'logo') {
       if (!skipLogoOnlyRows) {
-        await renderLogoOnlyRow(ctx, row.bands, row.y, row.h, offscreen.width, logoHGap, logoVPadPct, layout.logoMarginH);
+        await renderLogoOnlyRow(ctx, row.bands, row.y, row.h, offscreen.width, logoHGap, logoVPadPct, layout.logoMarginH, logoNorm);
       }
     } else {
       await renderNameRow(
         ctx, row.bands, row.y, row.h, offscreen.width, layout.nameMarginH,
         eventYear.separatorColor, eventYear.separatorChar, eventYear.nameTextColor,
-        nameFontScale
+        nameFontScale, nameWidthMin, nameWidthMax
       );
     }
   }

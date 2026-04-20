@@ -39,6 +39,9 @@ export interface Design {
   logoRowGapV?: number;
   nameMarginH?: number;
   nameRowGapV?: number;
+  nameWidthMax?: number;  // % scale for shortest names  (default 125)
+  nameWidthMin?: number;  // % scale for longest names   (default 65)
+  logoNorm?: number;      // logo size normalisation strength in % (default 100)
   photoBandCount: number;
   logoBandCount: number;
   photoRowSize: number;

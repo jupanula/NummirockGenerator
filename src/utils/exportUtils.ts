@@ -82,13 +82,14 @@ export async function exportAsPdf(
 
   // Vector SVG logos — positions computed with same flow algorithm as the canvas renderer
   const layout   = calculateDesignLayout(design, bands);
-  const logoHGap   = design.logoHGap    ?? 24;
+  const logoHGap    = design.logoHGap  ?? 24;
   const logoVPadPct = design.logoVPadPct ?? 8;
-  const parser   = new DOMParser();
+  const logoNorm    = (design.logoNorm ?? 100) / 100;
+  const parser      = new DOMParser();
 
   for (const row of layout.rows.filter(r => r.type === 'logo')) {
     const positions = await calculateLogoRowPositions(
-      row.bands, row.y, row.h, design.canvasWidth, logoHGap, logoVPadPct, layout.logoMarginH
+      row.bands, row.y, row.h, design.canvasWidth, logoHGap, logoVPadPct, layout.logoMarginH, logoNorm
     );
 
     for (const { band, x, y, w, h } of positions) {

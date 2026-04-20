@@ -90,9 +90,12 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
   const [nameRowSize, setNameRowSize] = useState(5);
   const [nameFontScale, setNameFontScale] = useState(1.15);
   const [nameGapScale, setNameGapScale] = useState(1.0);
+  const [nameWidthMax, setNameWidthMax] = useState(125);
+  const [nameWidthMin, setNameWidthMin] = useState(65);
   const [logoHGap, setLogoHGap] = useState(24);
   const [logoVPadPct, setLogoVPadPct] = useState(8);
   const [logoGrowth, setLogoGrowth] = useState(1.0);
+  const [logoNorm, setLogoNorm] = useState(100);
   const [bandLimit, setBandLimit] = useState<number | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -137,9 +140,12 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
       setNameRowSize(existingDesign.nameRowSize);
       setNameFontScale(existingDesign.nameFontScale ?? 1.0);
       setNameGapScale(existingDesign.nameGapScale ?? 1.0);
+      setNameWidthMax(existingDesign.nameWidthMax ?? 125);
+      setNameWidthMin(existingDesign.nameWidthMin ?? 65);
       setLogoHGap(existingDesign.logoHGap ?? 24);
       setLogoVPadPct(existingDesign.logoVPadPct ?? 8);
       setLogoGrowth(existingDesign.logoGrowth ?? 1.0);
+      setLogoNorm(existingDesign.logoNorm ?? 100);
       setBandLimit(existingDesign.bandLimit);
     }
   }, [existingDesign]);
@@ -164,8 +170,8 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
       photoMarginH, photoRowGapV, logoMarginH, logoRowGapV, nameMarginH, nameRowGapV,
       photoBandCount, logoBandCount,
       photoRowSize, photoGrowth, photoHGap, photoScale, photoHeightScale, logoRowSize, nameRowSize,
-      nameFontScale, nameGapScale,
-      logoHGap, logoVPadPct, logoGrowth,
+      nameFontScale, nameGapScale, nameWidthMax, nameWidthMin,
+      logoHGap, logoVPadPct, logoGrowth, logoNorm,
       bandLimit: bandLimit ?? undefined,
       createdAt: existingDesign?.createdAt ?? Date.now(),
       updatedAt: Date.now(),
@@ -192,8 +198,8 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
   }, [canvasWidth, canvasHeight, gapH, gapV, photoGapBelow, logoGapBelow,
     photoMarginH, photoRowGapV, logoMarginH, logoRowGapV, nameMarginH, nameRowGapV,
     photoBandCount, logoBandCount,
-    photoRowSize, photoGrowth, photoHGap, photoScale, photoHeightScale, logoRowSize, nameRowSize, nameFontScale, nameGapScale,
-    logoHGap, logoVPadPct, logoGrowth, bandLimit, activeBands, year]);
+    photoRowSize, photoGrowth, photoHGap, photoScale, photoHeightScale, logoRowSize, nameRowSize, nameFontScale, nameGapScale, nameWidthMax, nameWidthMin,
+    logoHGap, logoVPadPct, logoGrowth, logoNorm, bandLimit, activeBands, year]);
 
   useEffect(() => {
     triggerRender();
@@ -442,6 +448,11 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
               <input type="range" min={-200} max={200} step={1} value={logoGapBelow}
                 onChange={e => setLogoGapBelow(Number(e.target.value))} />
             </div>
+            <div className="field">
+              <label>Logo normalisation — {logoNorm}%</label>
+              <input type="range" min={0} max={200} step={5} value={logoNorm}
+                onChange={e => setLogoNorm(Number(e.target.value))} />
+            </div>
           </CollapsibleSection>
 
           <CollapsibleSection title="Names">
@@ -467,6 +478,16 @@ export default function DesignEditor({ yearId, designId, exportScale, onExportSc
               <label>Gap between rows — {nameRowGapV}px</label>
               <input type="range" min={-100} max={200} step={1} value={nameRowGapV}
                 onChange={e => setNameRowGapV(Number(e.target.value))} />
+            </div>
+            <div className="field">
+              <label>Short name width — {nameWidthMax}%</label>
+              <input type="range" min={100} max={180} step={5} value={nameWidthMax}
+                onChange={e => setNameWidthMax(Number(e.target.value))} />
+            </div>
+            <div className="field">
+              <label>Long name width — {nameWidthMin}%</label>
+              <input type="range" min={40} max={100} step={5} value={nameWidthMin}
+                onChange={e => setNameWidthMin(Number(e.target.value))} />
             </div>
           </CollapsibleSection>
 
