@@ -10,6 +10,7 @@ import {
   setupBackupFolder,
   getLatestBackup,
   restoreFromBackup,
+  reauthorizeOnInteraction,
   type BackupInfo,
 } from './utils/autoBackup';
 import './App.css';
@@ -49,7 +50,18 @@ export default function App() {
         setModalState('confirm-folder'); // folder set but DB empty — check for backups
       }
     }
+
+    async function ensureBackupPermission() {
+      const [count, configured] = await Promise.all([
+        db.eventYears.count(),
+        isBackupConfigured(),
+      ]);
+      if (count > 0 && configured) {
+        void reauthorizeOnInteraction();
+      }
+    }
     checkOnStartup();
+    ensureBackupPermission();
   }, []);
 
   // Auto-backup every 5 minutes

@@ -67,6 +67,29 @@ async function requestAndGetHandle(): Promise<FileSystemDirectoryHandle | null> 
   }
 }
 
+// Re-requests permission on the next user click, then writes a backup immediately.
+// Call on app startup whenever backup is configured. Safe to call anytime.
+export async function reauthorizeOnInteraction(): Promise<void> {
+  const handle = await loadHandle();
+  if (!handle) return;
+
+  // If already granted (e.g. same session), just write immediately
+  const perm = await handle.queryPermission({ mode: 'readwrite' });
+  if (perm === 'granted') {
+    void writeAutoBackup();
+    return;
+  }
+
+  // Wait for first user click, then re-request
+  const handler = async () => {
+    try {
+      const granted = await handle.requestPermission({ mode: 'readwrite' });
+      if (granted === 'granted') void writeAutoBackup();
+    } catch { /* user dismissed */ }
+  };
+  document.addEventListener('click', handler, { once: true });
+}
+
 // Silent auto-backup — skips if permission not already granted
 export async function writeAutoBackup(): Promise<void> {
   const handle = await getGrantedHandle();
