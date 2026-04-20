@@ -86,3 +86,19 @@
   font-weight: 600;
   text-align: center;
 }
+
+.restore-folder-hint {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--accent) !important;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px !important;
+}
+
+.restore-note {
+  font-size: 12px;
+  opacity: 0.6;
+}

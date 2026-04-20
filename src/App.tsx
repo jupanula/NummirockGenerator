@@ -7,7 +7,8 @@ import DesignEditor from './components/DesignEditor';
 import {
   writeAutoBackup,
   isBackupConfigured,
-  listBackups,
+  setupBackupFolder,
+  getLatestBackup,
   restoreFromBackup,
   type BackupInfo,
 } from './utils/autoBackup';
@@ -20,21 +21,33 @@ function readExportScale(): 1 | 2 | 4 {
   return (v === 2 || v === 4) ? v : 1;
 }
 
-type RestoreState = 'idle' | 'prompt' | 'listing' | 'restoring' | 'done';
+// onboarding     → no folder set, first launch
+// confirm-folder → folder just selected, checking for backups
+// confirm-restore → latest backup found, ask to import
+// restoring      → import in progress
+// done           → import finished
+type ModalState = 'idle' | 'onboarding' | 'confirm-folder' | 'confirm-restore' | 'restoring' | 'done';
 
 export default function App() {
   const [nav, setNav] = useState<NavState>({ view: 'home' });
   const [exportScale, setExportScale] = useState<1 | 2 | 4>(readExportScale);
-  const [restoreState, setRestoreState] = useState<RestoreState>('idle');
-  const [backupList, setBackupList] = useState<BackupInfo[]>([]);
+  const [modalState, setModalState] = useState<ModalState>('idle');
+  const [latestBackup, setLatestBackup] = useState<BackupInfo | null>(null);
 
-  // On mount: check if DB is empty and a backup folder is configured
   useEffect(() => {
     async function checkOnStartup() {
-      const count = await db.eventYears.count();
-      if (count > 0) return;
-      const configured = await isBackupConfigured();
-      if (configured) setRestoreState('prompt');
+      const [count, configured] = await Promise.all([
+        db.eventYears.count(),
+        isBackupConfigured(),
+      ]);
+
+      if (count > 0) return; // DB has data — nothing to do
+
+      if (!configured) {
+        setModalState('onboarding'); // first-time user
+      } else {
+        setModalState('confirm-folder'); // folder set but DB empty — check for backups
+      }
     }
     checkOnStartup();
   }, []);
@@ -45,29 +58,35 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  async function handleCheckBackups() {
-    setRestoreState('listing');
-    const list = await listBackups();
-    if (list.length === 0) {
-      setRestoreState('idle');
+  async function handleSelectFolder() {
+    const ok = await setupBackupFolder();
+    if (!ok) return; // user cancelled picker
+    setModalState('confirm-folder');
+    await checkForBackups();
+  }
+
+  async function checkForBackups() {
+    const latest = await getLatestBackup();
+    if (latest) {
+      setLatestBackup(latest);
+      setModalState('confirm-restore');
     } else {
-      setBackupList(list);
+      setModalState('idle'); // no backups, start fresh
     }
   }
 
-  async function handleRestore(info: BackupInfo) {
-    setRestoreState('restoring');
-    await restoreFromBackup(info.fileHandle);
-    setRestoreState('done');
-    setTimeout(() => setRestoreState('idle'), 1500);
+  async function handleRestore() {
+    if (!latestBackup) return;
+    setModalState('restoring');
+    await restoreFromBackup(latestBackup.fileHandle);
+    setModalState('done');
+    setTimeout(() => setModalState('idle'), 1500);
   }
 
   function handleExportScaleChange(s: 1 | 2 | 4) {
     setExportScale(s);
     localStorage.setItem('exportScale', String(s));
   }
-
-  const showModal = restoreState !== 'idle' && restoreState !== 'done';
 
   return (
     <div className="app">
@@ -97,67 +116,68 @@ export default function App() {
         />
       )}
 
-      {restoreState === 'done' && (
+      {modalState !== 'idle' && (
         <div className="restore-modal">
           <div className="restore-box">
-            <p className="restore-success">Restored successfully!</p>
-          </div>
-        </div>
-      )}
 
-      {showModal && (
-        <div className="restore-modal">
-          <div className="restore-box">
-            <h2>Database appears empty</h2>
-
-            {restoreState === 'prompt' && (
+            {modalState === 'onboarding' && (
               <>
-                <p>A backup folder is configured. Would you like to restore from a backup?</p>
+                <h2>Welcome to Nummirock Generator</h2>
+                <p>
+                  To sync with the shared team data, please select the backup
+                  folder on your computer:
+                </p>
+                <p className="restore-folder-hint">
+                  Nummirock Drive / 00Generator / backups
+                </p>
+                <p className="restore-note">
+                  Make sure Google Drive is synced locally before selecting.
+                </p>
                 <div className="restore-actions">
-                  <button className="btn-primary" onClick={handleCheckBackups}>
-                    Check for backups
+                  <button className="btn-primary" onClick={handleSelectFolder}>
+                    Select folder
                   </button>
-                  <button className="btn-ghost" onClick={() => setRestoreState('idle')}>
+                  <button className="btn-ghost" onClick={() => setModalState('idle')}>
+                    Skip for now
+                  </button>
+                </div>
+              </>
+            )}
+
+            {modalState === 'confirm-folder' && (
+              <>
+                <h2>Checking for backups…</h2>
+              </>
+            )}
+
+            {modalState === 'confirm-restore' && latestBackup && (
+              <>
+                <h2>Backup found</h2>
+                <p>
+                  Import the latest backup to get started with the shared data?
+                </p>
+                <p className="restore-folder-hint">
+                  {latestBackup.date.toLocaleString()}
+                </p>
+                <div className="restore-actions">
+                  <button className="btn-primary" onClick={handleRestore}>
+                    Import latest backup
+                  </button>
+                  <button className="btn-ghost" onClick={() => setModalState('idle')}>
                     Start fresh
                   </button>
                 </div>
               </>
             )}
 
-            {restoreState === 'listing' && backupList.length === 0 && (
-              <>
-                <p>Looking for backups…</p>
-              </>
+            {modalState === 'restoring' && (
+              <p>Importing backup…</p>
             )}
 
-            {restoreState === 'listing' && backupList.length > 0 && (
-              <>
-                <p>Choose a backup to restore:</p>
-                <div className="restore-list">
-                  {backupList.map(info => (
-                    <button
-                      key={info.name}
-                      className="restore-item"
-                      onClick={() => handleRestore(info)}
-                    >
-                      <span className="restore-item-date">
-                        {info.date.toLocaleString()}
-                      </span>
-                      <span className="restore-item-name">{info.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="restore-actions">
-                  <button className="btn-ghost" onClick={() => setRestoreState('idle')}>
-                    Start fresh instead
-                  </button>
-                </div>
-              </>
+            {modalState === 'done' && (
+              <p className="restore-success">Imported successfully!</p>
             )}
 
-            {restoreState === 'restoring' && (
-              <p>Restoring…</p>
-            )}
           </div>
         </div>
       )}

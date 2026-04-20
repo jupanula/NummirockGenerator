@@ -124,6 +124,12 @@ export async function listBackups(): Promise<BackupInfo[]> {
   return entries.sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 
+// Returns the single most recent backup — requests permission (call from user gesture)
+export async function getLatestBackup(): Promise<BackupInfo | null> {
+  const list = await listBackups();
+  return list[0] ?? null;
+}
+
 export async function restoreFromBackup(fileHandle: FileSystemFileHandle): Promise<void> {
   const file = await fileHandle.getFile();
   await importBackup(file);
