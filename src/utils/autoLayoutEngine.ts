@@ -197,16 +197,13 @@ export async function computeAutoLayout(
       const row     = photoBands.slice(bandIdx, bandIdx + n);
       bandIdx      += n;
 
-      const availW    = CW - Math.max(0, n - 1) * design.photoHGap;
-      const naturalBW = availW / n;
-      const naturalH  = naturalBW * COMPOSITE_AR;
-      // Cap row height to 40 % of canvas to prevent overflow on wide canvases
+      // Bands always fill the full canvas width — gap is only between images, not on the sides
+      const availW = CW - Math.max(0, n - 1) * design.photoHGap;
+      const bW     = availW / n;
+      const naturalH = bW * COMPOSITE_AR;
+      // Cap row height on wide canvases; image will be centre-cropped vertically by drawImageCover
       const rowH = Math.min(naturalH, CH * 0.4);
-      const bW   = rowH / COMPOSITE_AR;
-      // Centre bands horizontally if they no longer fill full canvas width
-      const usedW = n * bW + Math.max(0, n - 1) * design.photoHGap;
-      const xOff  = (CW - usedW) / 2;
-      const xs = row.map((_, i) => xOff + i * (bW + design.photoHGap));
+      const xs = row.map((_, i) => i * (bW + design.photoHGap));
       const ws = row.map(() => bW);
 
       photoRows.push({ bands: row, y, h: rowH, xs, ws });
@@ -295,7 +292,12 @@ export async function computeAutoLayout(
     const K_name_byH    = fontIfK > maxFontSize
       ? Math.ceil(namesAvailH_raw / maxFontSize)
       : K_name_byW;
-    const K_name        = Math.max(1, Math.min(nameBands.length, K_name_byH));
+    // nameFirstRow: if set (> 0), user directly controls bands-per-row → overrides auto K
+    const nameFirstRow  = design.nameFirstRow ?? 0;
+    const K_name_user   = nameFirstRow > 0
+      ? Math.ceil(nameBands.length / nameFirstRow)
+      : K_name_byH;
+    const K_name        = Math.max(1, Math.min(nameBands.length, K_name_user));
     const namesAvailH   = Math.max(K_name * 20, namesAvailH_raw);
 
     // Font size is determined only by available height ÷ K_name.
@@ -377,6 +379,7 @@ export function defaultAutoDesign(
     nameHGap:       28,
     nameRowGap:     4,
     nameNorm:       0,
+    nameFirstRow:   0,   // 0 = auto
     createdAt:      now,
     updatedAt:      now,
   };

@@ -70,6 +70,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [nameHGap,       setNameHGap]       = useState(28);
   const [nameRowGap,     setNameRowGap]     = useState(4);
   const [nameNorm,       setNameNorm]       = useState(0);
+  const [nameFirstRow,   setNameFirstRow]   = useState(0);
   const [saving,         setSaving]         = useState(false);
   const [exporting,      setExporting]      = useState(false);
 
@@ -95,6 +96,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       setNameHGap(existing.nameHGap);
       setNameRowGap(existing.nameRowGap);
       setNameNorm(existing.nameNorm ?? 0);
+      setNameFirstRow(existing.nameFirstRow ?? 0);
     } else if (allBands && allBands.length > 0 && !designId) {
       const d = defaultAutoDesign(yearId, allBands.length);
       setTotalBands(d.totalBands);
@@ -128,12 +130,13 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     nameHGap,
     nameRowGap,
     nameNorm,
+    nameFirstRow,
     createdAt: existing?.createdAt ?? Date.now(),
     updatedAt: Date.now(),
   }), [yearId, name, aspectRatio, totalBands, photoBandCount, logoBandCount,
       photoFirstRow, photoHGap, photoRowGap, photoGapBelow,
       logoHGap, logoRowGap, logoGapBelow, logoNorm,
-      nameHGap, nameRowGap, nameNorm, existing]);
+      nameHGap, nameRowGap, nameNorm, nameFirstRow, existing]);
 
   // ── Debounced render ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -282,7 +285,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
               <SliderField label="Gap between logos" value={logoHGap}
                 min={0} max={80} onChange={setLogoHGap} />
               <SliderField label="Gap between rows %" value={logoRowGap}
-                min={0} max={60} onChange={setLogoRowGap} />
+                min={-30} max={60} onChange={setLogoRowGap} />
               <SliderField label="Gap below section" value={logoGapBelow}
                 min={-40} max={120} onChange={setLogoGapBelow} />
             </Section>
@@ -291,12 +294,14 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
           {/* Names controls */}
           {nameBandCount > 0 && (
             <Section title="Names">
+              <SliderField label="Bands per row" value={nameFirstRow}
+                min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
               <SliderField label="Width normalisation" value={nameNorm}
                 min={0} max={100} onChange={setNameNorm} />
               <SliderField label="Gap between names" value={nameHGap}
                 min={0} max={200} onChange={setNameHGap} />
               <SliderField label="Gap between rows" value={nameRowGap}
-                min={0} max={120} onChange={setNameRowGap} />
+                min={-30} max={120} onChange={setNameRowGap} />
             </Section>
           )}
 

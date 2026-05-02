@@ -86,6 +86,7 @@ export interface AutoDesign {
   nameHGap: number;         // px between names (separator lives here)
   nameRowGap: number;       // px between name rows
   nameNorm: number;         // 0–100; 0 = proportional width, 100 = all names equal width
+  nameFirstRow: number;     // target bands per row (0 = auto)
   thumbnailBlob?: Blob;
   createdAt: number;
   updatedAt: number;
