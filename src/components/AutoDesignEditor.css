@@ -40,9 +40,33 @@
 
 .ade-header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-shrink: 0;
 }
+
+.ade-scale-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.ade-scale-btn {
+  padding: 5px 10px;
+  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-right: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.ade-scale-btn:last-child { border-right: none; }
+.ade-scale-btn:hover { background: var(--bg-hover, #2a2a2a); color: var(--text-primary); }
+.ade-scale-btn.active { background: var(--accent); color: #fff; }
 
 /* ── Body ─────────────────────────────────────────────────────────────────── */
 

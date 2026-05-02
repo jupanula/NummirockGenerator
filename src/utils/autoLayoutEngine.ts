@@ -173,9 +173,24 @@ export interface AutoLayoutResult {
 export async function computeAutoLayout(
   design: AutoDesign,
   allBands: Band[],
+  pixelScale = 1,
 ): Promise<AutoLayoutResult> {
 
-  const { w: CW, h: CH } = canvasDimensions(design.aspectRatio);
+  // Scale canvas dimensions and all absolute pixel gap values
+  const s  = pixelScale;
+  const { w: CW_base, h: CH_base } = canvasDimensions(design.aspectRatio);
+  const CW = Math.round(CW_base * s);
+  const CH = Math.round(CH_base * s);
+
+  // Pixel gaps (scale with resolution); ratio/count values stay as-is
+  const photoHGap     = design.photoHGap     * s;
+  const photoRowGap   = design.photoRowGap   * s;
+  const photoGapBelow = design.photoGapBelow * s;
+  const logoHGap      = design.logoHGap      * s;
+  // logoRowGap is % of row height → no scaling needed
+  const logoGapBelow  = design.logoGapBelow  * s;
+  const nameHGap      = design.nameHGap      * s;
+  const nameRowGap    = design.nameRowGap    * s;
 
   // Band slices (sequential)
   const total      = Math.min(design.totalBands, allBands.length);
@@ -198,17 +213,17 @@ export async function computeAutoLayout(
       bandIdx      += n;
 
       // Bands always fill the full canvas width — gap is only between images, not on the sides
-      const availW = CW - Math.max(0, n - 1) * design.photoHGap;
-      const bW     = availW / n;
+      const availW   = CW - Math.max(0, n - 1) * photoHGap;
+      const bW       = availW / n;
       const naturalH = bW * COMPOSITE_AR;
       // Cap row height on wide canvases; image will be centre-cropped vertically by drawImageCover
       const rowH = Math.min(naturalH, CH * 0.4);
-      const xs = row.map((_, i) => i * (bW + design.photoHGap));
+      const xs = row.map((_, i) => i * (bW + photoHGap));
       const ws = row.map(() => bW);
 
       photoRows.push({ bands: row, y, h: rowH, xs, ws });
 
-      if (ri < sizes.length - 1) y += rowH + design.photoRowGap;
+      if (ri < sizes.length - 1) y += rowH + photoRowGap;
       photoSectionH = y + rowH;
     }
   }
@@ -219,7 +234,7 @@ export async function computeAutoLayout(
   const totalEffAR = effARs.reduce((a, b) => a + b, 0);
 
   const logoStartY = photoBands.length > 0
-    ? photoSectionH + design.photoGapBelow
+    ? photoSectionH + photoGapBelow
     : 0;
 
   const logoRows: RowLayout[] = [];
@@ -228,7 +243,7 @@ export async function computeAutoLayout(
   if (logoBands.length > 0 && totalEffAR > 0) {
     // Budget: rough estimate for available logo height
     const nameEstH      = CH * 0.15;
-    const logoBudget    = CH - logoStartY - design.logoGapBelow - nameEstH;
+    const logoBudget    = CH - logoStartY - logoGapBelow - nameEstH;
     const K_logo        = Math.max(1, Math.min(
       logoBands.length,
       Math.round(Math.sqrt(Math.max(0, logoBudget) * totalEffAR / CW))
@@ -243,16 +258,16 @@ export async function computeAutoLayout(
       const row      = idxs.map(i => logoBands[i]);
       const rowARs   = idxs.map(i => effARs[i]);
       const n        = row.length;
-      const availW   = CW - Math.max(0, n - 1) * design.logoHGap;
+      const availW   = CW - Math.max(0, n - 1) * logoHGap;
       const sumAR    = rowARs.reduce((a, b) => a + b, 0);
-      const rowH     = sumAR > 0 ? availW / sumAR : 60;
+      const rowH     = sumAR > 0 ? availW / sumAR : 60 * s;
 
       const ws: number[] = rowARs.map(ar => ar * rowH);
       const xs: number[] = [];
       let x = 0;
       for (let i = 0; i < n; i++) {
         xs.push(x);
-        x += ws[i] + (i < n - 1 ? design.logoHGap : 0);
+        x += ws[i] + (i < n - 1 ? logoHGap : 0);
       }
 
       logoRows.push({ bands: row, y, h: rowH, xs, ws });
@@ -265,19 +280,19 @@ export async function computeAutoLayout(
 
   // ── Names section ──────────────────────────────────────────────────────────
   const nameStartY = logoRows.length > 0
-    ? logoStartY + logoSectionH + design.logoGapBelow
+    ? logoStartY + logoSectionH + logoGapBelow
     : logoStartY;
 
   const nameRows: RowLayout[] = [];
-  let fontSize = 30;
+  let fontSize = 30 * s;
 
   if (nameBands.length > 0) {
     // Use nameNorm-adjusted widths for row partitioning
     const nameWidths  = nameBands.map(b => effectiveNameWidth(b.name, design.nameNorm ?? 0));
     const totalNameW  = nameWidths.reduce((a, b) => a + b, 0);
 
-    // Convert effective name width units → approximate pixels at a 30 px reference font
-    const FONT_REF   = 30;
+    // FONT_REF is scaled so K_name stays the same regardless of pixelScale
+    const FONT_REF   = 30 * s;
     const CHAR_W     = 0.55;
     const K_name_byW = Math.max(1, Math.min(nameBands.length,
       Math.round(totalNameW * FONT_REF * CHAR_W / CW),
@@ -286,7 +301,7 @@ export async function computeAutoLayout(
     // Available vertical space for names
     const namesAvailH_raw = Math.max(0, CH - nameStartY);
     // Max font size: 8 % of canvas height keeps separators tasteful
-    const maxFontSize   = Math.max(16, CH * 0.08);
+    const maxFontSize   = Math.max(16 * s, CH * 0.08);
     // If the height-derived font size would exceed maxFontSize, add more rows
     const fontIfK       = namesAvailH_raw / Math.max(1, K_name_byW);
     const K_name_byH    = fontIfK > maxFontSize
@@ -298,11 +313,11 @@ export async function computeAutoLayout(
       ? Math.ceil(nameBands.length / nameFirstRow)
       : K_name_byH;
     const K_name        = Math.max(1, Math.min(nameBands.length, K_name_user));
-    const namesAvailH   = Math.max(K_name * 20, namesAvailH_raw);
+    const namesAvailH   = Math.max(K_name * 20 * s, namesAvailH_raw);
 
     // Font size is determined only by available height ÷ K_name.
     // nameRowGap adds spacing between rows WITHOUT shrinking the text.
-    fontSize = Math.max(12, Math.min(maxFontSize, namesAvailH / K_name));
+    fontSize = Math.max(12 * s, Math.min(maxFontSize, namesAvailH / K_name));
 
     const partition = partitionEqualWeight(nameWidths, K_name);
     let y = nameStartY;
@@ -313,7 +328,7 @@ export async function computeAutoLayout(
       const rowWidths = idxs.map(i => nameWidths[i]);
       const n         = row.length;
       const totalW    = rowWidths.reduce((a, b) => a + b, 0);
-      const availW    = CW - Math.max(0, n - 1) * design.nameHGap;
+      const availW    = CW - Math.max(0, n - 1) * nameHGap;
       const scale     = totalW > 0 ? availW / totalW : 1;
 
       const ws = rowWidths.map(w => w * scale);
@@ -321,11 +336,11 @@ export async function computeAutoLayout(
       let x = 0;
       for (let i = 0; i < n; i++) {
         xs.push(x);
-        x += ws[i] + (i < n - 1 ? design.nameHGap : 0);
+        x += ws[i] + (i < n - 1 ? nameHGap : 0);
       }
 
       nameRows.push({ bands: row, y, h: fontSize, xs, ws });
-      if (ri < partition.length - 1) y += fontSize + design.nameRowGap;
+      if (ri < partition.length - 1) y += fontSize + nameRowGap;
     }
   }
 

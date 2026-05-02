@@ -1,8 +1,11 @@
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
 import type { Band, EventYear, AutoDesign } from '../types';
 import {
   ensureFontLoaded,
   blobToImage,
   svgBlobToWhiteImageSized,
+  svgBlobToWhiteString,
   drawImageCover,
   drawImageContain,
 } from './canvasRenderer';
@@ -71,7 +74,9 @@ function renderNameRow(
   separatorColor: string,
 ): void {
   const baseline  = row.y + fontSize * 0.85; // approximate cap-height baseline
-  const midY      = row.y + row.h / 2;       // vertical centre of the row
+  // Place separator at the visual centre of uppercase text (cap-height centre ≈ 60 % of row height
+  // rather than 50 %, because the ■ glyph sits in the upper portion of its em box)
+  const midY      = row.y + row.h * 0.60;
   const sepSize   = Math.round(fontSize * 0.45); // separator slightly smaller than text
 
   for (let i = 0; i < row.bands.length; i++) {
@@ -113,10 +118,12 @@ export async function renderAutoDesignToCanvas(
   bands: Band[],
   eventYear: EventYear,
   transparent = false,
+  pixelScale  = 1,
+  skipLogoRows = false,
 ): Promise<void> {
   await ensureFontLoaded();
 
-  const layout = await computeAutoLayout(design, bands);
+  const layout = await computeAutoLayout(design, bands, pixelScale);
   const { canvasWidth: CW, canvasHeight: CH } = layout;
 
   canvas.width  = CW;
@@ -132,17 +139,16 @@ export async function renderAutoDesignToCanvas(
     ctx.fillRect(0, 0, CW, CH);
   }
 
-  // Font for names
-  ctx.font = `${layout.fontSize}px NummirockFont, sans-serif`;
-
   // Photo rows
   for (const row of layout.photoRows) {
     await renderPhotoRow(ctx, row);
   }
 
-  // Logo rows
-  for (const row of layout.logoRows) {
-    await renderLogoRow(ctx, row);
+  // Logo rows (optionally skipped when logos are rendered as vectors in PDF)
+  if (!skipLogoRows) {
+    for (const row of layout.logoRows) {
+      await renderLogoRow(ctx, row);
+    }
   }
 
   // Name rows
@@ -185,13 +191,81 @@ export async function exportAutoDesignAsPng(
   design: AutoDesign,
   bands: Band[],
   eventYear: EventYear,
+  scale: 1 | 2 | 4 = 1,
 ): Promise<void> {
   const canvas = document.createElement('canvas');
-  await renderAutoDesignToCanvas(canvas, design, bands, eventYear, false);
+  await renderAutoDesignToCanvas(canvas, design, bands, eventYear, false, scale);
 
-  const url = canvas.toDataURL('image/png');
-  const a   = document.createElement('a');
-  a.href     = url;
-  a.download = `${design.name.replace(/\s+/g, '-')}.png`;
-  a.click();
+  const suffix = scale > 1 ? `@${scale}x` : '';
+  return new Promise(resolve => {
+    canvas.toBlob(blob => {
+      if (!blob) { resolve(); return; }
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = `${design.name.replace(/\s+/g, '-')}${suffix}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      resolve();
+    }, 'image/png');
+  });
+}
+
+// ── PDF export ────────────────────────────────────────────────────────────────
+
+export async function exportAutoDesignAsPdf(
+  design: AutoDesign,
+  bands: Band[],
+  eventYear: EventYear,
+): Promise<void> {
+  const PDF_SCALE = 3; // render at 3× for print-quality raster layer
+
+  // Raster layer — transparent background, logo rows skipped (added as vectors below)
+  const rasterCanvas = document.createElement('canvas');
+  await renderAutoDesignToCanvas(
+    rasterCanvas, design, bands, eventYear,
+    /* transparent */ true,
+    /* pixelScale  */ PDF_SCALE,
+    /* skipLogoRows */ true,
+  );
+
+  // PDF page size based on base canvas dimensions (px → mm at 96 dpi)
+  const { w: baseW, h: baseH } = canvasDimensions(design.aspectRatio);
+  const pxToMm = (px: number) => (px * 25.4) / 96;
+  const wMm = pxToMm(baseW);
+  const hMm = pxToMm(baseH);
+
+  const pdf = new jsPDF({
+    orientation: baseW >= baseH ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: [wMm, hMm],
+  });
+
+  // Embed raster (photos + names, no backgrounds)
+  const rasterDataUrl = rasterCanvas.toDataURL('image/png');
+  pdf.addImage(rasterDataUrl, 'PNG', 0, 0, wMm, hMm);
+
+  // Vector SVG logos — compute 1× layout to get pixel positions, convert to mm
+  const layout = await computeAutoLayout(design, bands, 1);
+  const parser = new DOMParser();
+
+  for (const row of layout.logoRows) {
+    for (let i = 0; i < row.bands.length; i++) {
+      const band = row.bands[i];
+      if (!(band.logoBlob instanceof Blob)) continue;
+      try {
+        const svgText = await svgBlobToWhiteString(band.logoBlob);
+        const svgEl   = parser.parseFromString(svgText, 'image/svg+xml')
+          .documentElement as unknown as SVGSVGElement;
+        await svg2pdf(svgEl, pdf, {
+          x: pxToMm(row.xs[i]),
+          y: pxToMm(row.y),
+          width:  pxToMm(row.ws[i]),
+          height: pxToMm(row.h),
+        });
+      } catch { /* skip broken SVGs */ }
+    }
+  }
+
+  pdf.save(`${design.name.replace(/\s+/g, '-')}.pdf`);
 }

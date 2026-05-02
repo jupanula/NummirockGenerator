@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import type { AutoDesign } from '../types';
 import { canvasDimensions, defaultAutoDesign } from '../utils/autoLayoutEngine';
-import { renderAutoDesignToCanvas, generateAutoThumbnail, exportAutoDesignAsPng } from '../utils/autoDesignRenderer';
+import { renderAutoDesignToCanvas, generateAutoThumbnail, exportAutoDesignAsPng, exportAutoDesignAsPdf } from '../utils/autoDesignRenderer';
 import './AutoDesignEditor.css';
 
 // ── Collapsible section ───────────────────────────────────────────────────────
@@ -71,8 +71,10 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [nameRowGap,     setNameRowGap]     = useState(4);
   const [nameNorm,       setNameNorm]       = useState(0);
   const [nameFirstRow,   setNameFirstRow]   = useState(0);
+  const [exportScale,    setExportScale]    = useState<1 | 2 | 4>(1);
   const [saving,         setSaving]         = useState(false);
   const [exporting,      setExporting]      = useState(false);
+  const [exportingPdf,   setExportingPdf]   = useState(false);
 
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const renderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -168,14 +170,25 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     onBack();
   }
 
-  // ── Export ─────────────────────────────────────────────────────────────────
+  // ── Export PNG ─────────────────────────────────────────────────────────────
   async function handleExport() {
     if (!allBands || !year) return;
     setExporting(true);
     try {
-      await exportAutoDesignAsPng(buildDesign(), allBands, year);
+      await exportAutoDesignAsPng(buildDesign(), allBands, year, exportScale);
     } finally {
       setExporting(false);
+    }
+  }
+
+  // ── Export PDF ─────────────────────────────────────────────────────────────
+  async function handleExportPdf() {
+    if (!allBands || !year) return;
+    setExportingPdf(true);
+    try {
+      await exportAutoDesignAsPdf(buildDesign(), allBands, year);
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -222,8 +235,20 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
           placeholder="Design name"
         />
         <div className="ade-header-actions">
+          <div className="ade-scale-group">
+            {([1, 2, 4] as const).map(s => (
+              <button
+                key={s}
+                className={`ade-scale-btn${exportScale === s ? ' active' : ''}`}
+                onClick={() => setExportScale(s)}
+              >{s}×</button>
+            ))}
+          </div>
           <button className="btn-secondary" onClick={handleExport} disabled={exporting}>
-            {exporting ? 'Exporting…' : 'Export PNG'}
+            {exporting ? 'Exporting…' : 'PNG'}
+          </button>
+          <button className="btn-secondary" onClick={handleExportPdf} disabled={exportingPdf}>
+            {exportingPdf ? 'Exporting…' : 'PDF'}
           </button>
           <button className="btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : 'Save'}
