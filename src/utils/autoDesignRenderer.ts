@@ -73,40 +73,63 @@ function renderNameRow(
   separatorChar: string,
   separatorColor: string,
 ): void {
-  const baseline  = row.y + fontSize * 0.85; // approximate cap-height baseline
-  // Place separator at the visual centre of uppercase text (cap-height centre ≈ 60 % of row height
-  // rather than 50 %, because the ■ glyph sits in the upper portion of its em box)
-  const midY      = row.y + row.h * 0.60;
-  const sepSize   = Math.round(fontSize * 0.45); // separator slightly smaller than text
+  const n = row.bands.length;
+  if (n === 0) return;
 
-  for (let i = 0; i < row.bands.length; i++) {
-    const name = row.bands[i].name.toUpperCase();
-    const x    = row.xs[i];
-    const w    = row.ws[i];
+  const names = row.bands.map(b => b.name.toUpperCase());
 
-    ctx.fillStyle    = textColor;
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign    = 'left';
-    ctx.font         = `${fontSize}px NummirockFont, sans-serif`;
+  // Derive geometry from the layout row (avoids needing extra params).
+  const rowLeft  = row.xs[0];
+  const rowRight = row.xs[n - 1] + row.ws[n - 1];
+  // Gap between adjacent names (derived from layout positions).
+  const nameHGap = n > 1 ? row.xs[1] - (row.xs[0] + row.ws[0]) : 0;
+  const totalGapW = Math.max(0, n - 1) * nameHGap;
+  const availTextW = (rowRight - rowLeft) - totalGapW;
 
-    const measured = ctx.measureText(name).width;
-    if (measured <= 0) continue;
+  // Measure every name at the section fontSize to get true pixel widths.
+  ctx.font = `${fontSize}px NummirockFont, sans-serif`;
+  const measured   = names.map(name => Math.max(1, ctx.measureText(name).width));
+  const totalMeasured = measured.reduce((a, b) => a + b, 0);
 
-    ctx.save();
-    // Translate to the band's x, then scale horizontally to fit its allocated width
-    ctx.transform(w / measured, 0, 0, 1, x, 0);
-    ctx.fillText(name, 0, baseline);
-    ctx.restore();
+  // Scale the font size so all names fit without horizontal distortion.
+  // We only shrink (never grow beyond the section fontSize) — if text is
+  // narrower than the row, it renders at the full fontSize.
+  const rowFontSize = totalMeasured > 0
+    ? Math.min(fontSize, fontSize * availTextW / totalMeasured)
+    : fontSize;
+  const rowScale = rowFontSize / fontSize; // fraction of section fontSize
 
-    // Separator between names (not before first, not after last)
-    if (i < row.bands.length - 1) {
-      const gapCentreX = row.xs[i + 1] - (row.xs[i + 1] - (x + w)) / 2;
+  const baseline = row.y + rowFontSize * 0.85;
+  const midY     = row.y + row.h * 0.60;
+  const sepSize  = Math.round(rowFontSize * 0.45);
+
+  ctx.font         = `${rowFontSize}px NummirockFont, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign    = 'left';
+
+  let x = rowLeft;
+  for (let i = 0; i < n; i++) {
+    // Width this name occupies at rowFontSize (proportionally scaled).
+    const nameW = measured[i] * rowScale;
+
+    ctx.fillStyle = textColor;
+    ctx.fillText(names[i], x, baseline);
+
+    // Separator centred in the gap between this name and the next.
+    if (i < n - 1) {
+      const gapCentreX = x + nameW + nameHGap / 2;
       ctx.fillStyle    = separatorColor;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
       ctx.font         = `${sepSize}px NummirockFont, sans-serif`;
       ctx.fillText(separatorChar, gapCentreX, midY);
+      // Restore for next name
+      ctx.font         = `${rowFontSize}px NummirockFont, sans-serif`;
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign    = 'left';
     }
+
+    x += nameW + nameHGap;
   }
 }
 
@@ -151,8 +174,7 @@ export async function renderAutoDesignToCanvas(
     }
   }
 
-  // Name rows
-  ctx.font = `${layout.fontSize}px NummirockFont, sans-serif`;
+  // Name rows — each row sets its own font size based on measured text widths
   for (const row of layout.nameRows) {
     renderNameRow(
       ctx, row, layout.fontSize,
