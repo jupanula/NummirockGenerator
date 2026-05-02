@@ -72,6 +72,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [nameRowGap,     setNameRowGap]     = useState(4);
   const [nameNorm,       setNameNorm]       = useState(0);
   const [nameFirstRow,   setNameFirstRow]   = useState(0);
+  const [nameFontScale,  setNameFontScale]  = useState(100);
   const [exportScale,    setExportScale]    = useState<1 | 2 | 4>(1);
   const [saving,         setSaving]         = useState(false);
   const [exporting,      setExporting]      = useState(false);
@@ -102,6 +103,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       setNameRowGap(existing.nameRowGap);
       setNameNorm(existing.nameNorm ?? 0);
       setNameFirstRow(existing.nameFirstRow ?? 0);
+      setNameFontScale(existing.nameFontScale ?? 100);
     } else if (allBands && allBands.length > 0 && !designId) {
       const d = defaultAutoDesign(yearId, allBands);
       setTotalBands(d.totalBands);
@@ -137,12 +139,13 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     nameRowGap,
     nameNorm,
     nameFirstRow,
+    nameFontScale,
     createdAt: existing?.createdAt ?? Date.now(),
     updatedAt: Date.now(),
   }), [yearId, name, aspectRatio, totalBands, photoBandCount, logoBandCount,
       photoFirstRow, photoHGap, photoRowGap, photoGapBelow,
       logoHGap, logoRowGap, logoGapBelow, logoNorm, logoFirstRow,
-      nameHGap, nameRowGap, nameNorm, nameFirstRow, existing]);
+      nameHGap, nameRowGap, nameNorm, nameFirstRow, nameFontScale, existing]);
 
   // ── Debounced render ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -328,12 +331,14 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
             <Section title="Names">
               <SliderField label="Bands per row" value={nameFirstRow}
                 min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
+              <SliderField label="Font size %" value={nameFontScale}
+                min={50} max={200} onChange={setNameFontScale} />
               <SliderField label="Width normalisation" value={nameNorm}
                 min={0} max={100} onChange={setNameNorm} />
               <SliderField label="Gap between names" value={nameHGap}
                 min={0} max={200} onChange={setNameHGap} />
               <SliderField label="Gap between rows" value={nameRowGap}
-                min={-30} max={120} onChange={setNameRowGap} />
+                min={-100} max={0} onChange={setNameRowGap} />
             </Section>
           )}
 

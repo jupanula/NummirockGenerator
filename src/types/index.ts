@@ -88,6 +88,7 @@ export interface AutoDesign {
   nameRowGap: number;       // px between name rows
   nameNorm: number;         // 0–100; 0 = proportional width, 100 = all names equal width
   nameFirstRow: number;     // target bands per row (0 = auto)
+  nameFontScale: number;    // 50–200; multiplier on auto-computed font size (100 = auto)
   thumbnailBlob?: Blob;
   createdAt: number;
   updatedAt: number;

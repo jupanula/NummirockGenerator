@@ -336,9 +336,12 @@ export async function computeAutoLayout(
     // Font size: subtract the total inter-row gap height before dividing,
     // so K_name rows of fontSize + (K_name-1) gaps fits exactly in namesAvailH.
     const totalNameGapH = Math.max(0, K_name - 1) * nameRowGap;
-    fontSize = Math.max(12 * s, Math.min(maxFontSize,
+    const autoFontSize  = Math.max(12 * s, Math.min(maxFontSize,
       (namesAvailH - totalNameGapH) / K_name,
     ));
+    // nameFontScale: 50–200 integer (100 = auto). Clamp so text stays legible.
+    const fontScalePct = design.nameFontScale ?? 100;
+    fontSize = Math.max(12 * s, autoFontSize * fontScalePct / 100);
 
     const partition = partitionEqualWeight(nameWidths, K_name);
     let y = nameStartY;
@@ -421,6 +424,7 @@ export function defaultAutoDesign(
     nameRowGap:     4,
     nameNorm:       0,
     nameFirstRow:   0,   // 0 = auto
+    nameFontScale:  100, // 100 = auto-sized
     createdAt:      now,
     updatedAt:      now,
   };

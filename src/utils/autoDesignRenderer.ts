@@ -65,6 +65,12 @@ async function renderLogoRow(
 
 // ── Name row ──────────────────────────────────────────────────────────────────
 
+/**
+ * Render one name row.
+ * Font size is uniform (height-driven). The normaliser's effect is expressed
+ * purely as horizontal stretch: each name is scaled in X so it fills its
+ * layout-assigned slot exactly, making the row span full width left-to-right.
+ */
 function renderNameRow(
   ctx: CanvasRenderingContext2D,
   row: RowLayout,
@@ -76,60 +82,40 @@ function renderNameRow(
   const n = row.bands.length;
   if (n === 0) return;
 
-  const names = row.bands.map(b => b.name.toUpperCase());
+  const names    = row.bands.map(b => b.name.toUpperCase());
+  const sepSize  = Math.round(fontSize * 0.45);
+  const baseline = row.y + fontSize * 0.85;
+  const midY     = row.y + fontSize * 0.60;
 
-  // Derive geometry from the layout row (avoids needing extra params).
-  const rowLeft  = row.xs[0];
-  const rowRight = row.xs[n - 1] + row.ws[n - 1];
-  // Gap between adjacent names (derived from layout positions).
-  const nameHGap = n > 1 ? row.xs[1] - (row.xs[0] + row.ws[0]) : 0;
-  const totalGapW = Math.max(0, n - 1) * nameHGap;
-  const availTextW = (rowRight - rowLeft) - totalGapW;
-
-  // Measure every name at the section fontSize to get true pixel widths.
-  ctx.font = `${fontSize}px NummirockFont, sans-serif`;
-  const measured   = names.map(name => Math.max(1, ctx.measureText(name).width));
-  const totalMeasured = measured.reduce((a, b) => a + b, 0);
-
-  // Scale the font size so all names fit without horizontal distortion.
-  // We only shrink (never grow beyond the section fontSize) — if text is
-  // narrower than the row, it renders at the full fontSize.
-  const rowFontSize = totalMeasured > 0
-    ? Math.min(fontSize, fontSize * availTextW / totalMeasured)
-    : fontSize;
-  const rowScale = rowFontSize / fontSize; // fraction of section fontSize
-
-  const baseline = row.y + rowFontSize * 0.85;
-  const midY     = row.y + rowFontSize * 0.60;
-  const sepSize  = Math.round(rowFontSize * 0.45);
-
-  ctx.font         = `${rowFontSize}px NummirockFont, sans-serif`;
-  ctx.textBaseline = 'alphabetic';
-  ctx.textAlign    = 'left';
-
-  let x = rowLeft;
   for (let i = 0; i < n; i++) {
-    // Width this name occupies at rowFontSize (proportionally scaled).
-    const nameW = measured[i] * rowScale;
+    const slotX = row.xs[i];
+    const slotW = row.ws[i];
 
-    ctx.fillStyle = textColor;
-    ctx.fillText(names[i], x, baseline);
+    // Measure natural text width at the uniform fontSize
+    ctx.font = `${fontSize}px NummirockFont, sans-serif`;
+    const textW  = Math.max(1, ctx.measureText(names[i]).width);
+    // Horizontal scale: compress long names, stretch short ones to fill slot
+    const scaleX = slotW / textW;
 
-    // Separator centred in the gap between this name and the next.
+    ctx.save();
+    ctx.translate(slotX, 0);
+    ctx.scale(scaleX, 1);
+    ctx.font         = `${fontSize}px NummirockFont, sans-serif`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign    = 'left';
+    ctx.fillStyle    = textColor;
+    ctx.fillText(names[i], 0, baseline);
+    ctx.restore();
+
+    // Separator centred in the gap between this slot and the next
     if (i < n - 1) {
-      const gapCentreX = x + nameW + nameHGap / 2;
+      const gapCentreX = (slotX + slotW + row.xs[i + 1]) / 2;
+      ctx.font         = `${sepSize}px NummirockFont, sans-serif`;
       ctx.fillStyle    = separatorColor;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font         = `${sepSize}px NummirockFont, sans-serif`;
       ctx.fillText(separatorChar, gapCentreX, midY);
-      // Restore for next name
-      ctx.font         = `${rowFontSize}px NummirockFont, sans-serif`;
-      ctx.textBaseline = 'alphabetic';
-      ctx.textAlign    = 'left';
     }
-
-    x += nameW + nameHGap;
   }
 }
 
@@ -174,27 +160,11 @@ export async function renderAutoDesignToCanvas(
     }
   }
 
-  // Name rows — compute a single font size across all rows so every row is identical
-  let globalNameFontSize = layout.fontSize;
-  for (const row of layout.nameRows) {
-    const n = row.bands.length;
-    if (n === 0) continue;
-    const names = row.bands.map(b => b.name.toUpperCase());
-    const rowLeft  = row.xs[0];
-    const rowRight = row.xs[n - 1] + row.ws[n - 1];
-    const nameHGap   = n > 1 ? row.xs[1] - (row.xs[0] + row.ws[0]) : 0;
-    const availTextW = (rowRight - rowLeft) - Math.max(0, n - 1) * nameHGap;
-    ctx.font = `${layout.fontSize}px NummirockFont, sans-serif`;
-    const totalMeasured = names.reduce((sum, name) => sum + Math.max(1, ctx.measureText(name).width), 0);
-    const rowFontSize = totalMeasured > 0
-      ? Math.min(layout.fontSize, layout.fontSize * availTextW / totalMeasured)
-      : layout.fontSize;
-    if (rowFontSize < globalNameFontSize) globalNameFontSize = rowFontSize;
-  }
-
+  // Name rows — font size is height-driven (same for all rows); horizontal
+  // stretching fills each name to its normaliser-assigned slot width.
   for (const row of layout.nameRows) {
     renderNameRow(
-      ctx, row, globalNameFontSize,
+      ctx, row, layout.fontSize,
       eventYear.nameTextColor ?? '#ffffff',
       eventYear.separatorChar ?? '■',
       eventYear.separatorColor ?? '#E6007E',
