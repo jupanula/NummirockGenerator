@@ -84,7 +84,8 @@ export interface AutoDesign {
   logoNorm: number;         // 0–100; 0 = natural AR, 100 = all logos same width
   // Names layout
   nameHGap: number;         // px between names (separator lives here)
-  nameRowGap: number;
+  nameRowGap: number;       // px between name rows
+  nameNorm: number;         // 0–100; 0 = proportional width, 100 = all names equal width
   thumbnailBlob?: Blob;
   createdAt: number;
   updatedAt: number;

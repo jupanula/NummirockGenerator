@@ -34,6 +34,18 @@ export function normNameWidth(name: string): number {
 }
 
 /**
+ * Effective name width after normalisation toward equal width.
+ * nameNorm 0 = proportional to name length (current normNameWidth).
+ * nameNorm 100 = all names get the same weight (≈ 10 units).
+ */
+export function effectiveNameWidth(name: string, nameNorm: number): number {
+  const raw  = normNameWidth(name);
+  const norm = Math.max(0, Math.min(100, nameNorm ?? 0)) / 100;
+  const equal = 10; // "equal" target weight in normNameWidth units
+  return raw * (1 - norm) + equal * norm;
+}
+
+/**
  * Effective logo aspect ratio after normalisation toward 1:1.
  * logoNorm 0 = natural AR, 100 = AR forced to 1.
  * Uses power scaling: effectiveAR = actualAR^(1 − norm)
@@ -248,7 +260,8 @@ export async function computeAutoLayout(
 
       logoRows.push({ bands: row, y, h: rowH, xs, ws });
       endY = y + rowH;
-      if (ri < partition.length - 1) y = endY + design.logoRowGap;
+      // logoRowGap is a % of the current row height → visually uniform regardless of logo size
+      if (ri < partition.length - 1) y = endY + rowH * design.logoRowGap / 100;
     }
     logoSectionH = endY - logoStartY;
   }
@@ -262,11 +275,11 @@ export async function computeAutoLayout(
   let fontSize = 30;
 
   if (nameBands.length > 0) {
-    const nameWidths  = nameBands.map(b => normNameWidth(b.name));
+    // Use nameNorm-adjusted widths for row partitioning
+    const nameWidths  = nameBands.map(b => effectiveNameWidth(b.name, design.nameNorm ?? 0));
     const totalNameW  = nameWidths.reduce((a, b) => a + b, 0);
 
-    // Convert normNameWidth units → approximate pixels at a 30 px reference font
-    // (normNameWidth ≈ charCount × scale; ×30×0.55 gives pixel width at 30 px)
+    // Convert effective name width units → approximate pixels at a 30 px reference font
     const FONT_REF   = 30;
     const CHAR_W     = 0.55;
     const K_name_byW = Math.max(1, Math.min(nameBands.length,
@@ -285,9 +298,9 @@ export async function computeAutoLayout(
     const K_name        = Math.max(1, Math.min(nameBands.length, K_name_byH));
     const namesAvailH   = Math.max(K_name * 20, namesAvailH_raw);
 
-    fontSize = Math.max(12, Math.min(maxFontSize,
-      (namesAvailH - Math.max(0, K_name - 1) * design.nameRowGap) / K_name,
-    ));
+    // Font size is determined only by available height ÷ K_name.
+    // nameRowGap adds spacing between rows WITHOUT shrinking the text.
+    fontSize = Math.max(12, Math.min(maxFontSize, namesAvailH / K_name));
 
     const partition = partitionEqualWeight(nameWidths, K_name);
     let y = nameStartY;
@@ -358,11 +371,12 @@ export function defaultAutoDesign(
     photoRowGap:    6,
     photoGapBelow:  20,
     logoHGap:       10,
-    logoRowGap:     6,
+    logoRowGap:     15,  // % of row height (proportional gap)
     logoGapBelow:   16,
     logoNorm:       60,
     nameHGap:       28,
     nameRowGap:     4,
+    nameNorm:       0,
     createdAt:      now,
     updatedAt:      now,
   };
