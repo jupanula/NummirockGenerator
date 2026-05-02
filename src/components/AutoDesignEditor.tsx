@@ -301,7 +301,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
               <SliderField label="Gap between bands" value={photoHGap}
                 min={0} max={60} onChange={setPhotoHGap} />
               <SliderField label="Gap between rows" value={photoRowGap}
-                min={-40} max={60} onChange={setPhotoRowGap} />
+                min={-200} max={0} onChange={setPhotoRowGap} />
               <SliderField label="Gap below section" value={photoGapBelow}
                 min={-80} max={80} onChange={setPhotoGapBelow} />
             </Section>
