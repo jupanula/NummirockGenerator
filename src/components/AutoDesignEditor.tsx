@@ -67,6 +67,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [logoRowGap,     setLogoRowGap]     = useState(6);
   const [logoGapBelow,   setLogoGapBelow]   = useState(16);
   const [logoNorm,       setLogoNorm]       = useState(60);
+  const [logoFirstRow,   setLogoFirstRow]   = useState(0);
   const [nameHGap,       setNameHGap]       = useState(28);
   const [nameRowGap,     setNameRowGap]     = useState(4);
   const [nameNorm,       setNameNorm]       = useState(0);
@@ -96,6 +97,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       setLogoRowGap(existing.logoRowGap);
       setLogoGapBelow(existing.logoGapBelow);
       setLogoNorm(existing.logoNorm);
+      setLogoFirstRow(existing.logoFirstRow ?? 0);
       setNameHGap(existing.nameHGap);
       setNameRowGap(existing.nameRowGap);
       setNameNorm(existing.nameNorm ?? 0);
@@ -130,6 +132,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     logoRowGap,
     logoGapBelow,
     logoNorm,
+    logoFirstRow,
     nameHGap,
     nameRowGap,
     nameNorm,
@@ -138,7 +141,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     updatedAt: Date.now(),
   }), [yearId, name, aspectRatio, totalBands, photoBandCount, logoBandCount,
       photoFirstRow, photoHGap, photoRowGap, photoGapBelow,
-      logoHGap, logoRowGap, logoGapBelow, logoNorm,
+      logoHGap, logoRowGap, logoGapBelow, logoNorm, logoFirstRow,
       nameHGap, nameRowGap, nameNorm, nameFirstRow, existing]);
 
   // ── Debounced render ───────────────────────────────────────────────────────
@@ -307,6 +310,8 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
           {/* Logo controls */}
           {logoBandCount > 0 && (
             <Section title="Logo only">
+              <SliderField label="Bands on first row" value={logoFirstRow}
+                min={0} max={Math.max(1, logoBandCount)} onChange={setLogoFirstRow} />
               <SliderField label="Normalisation" value={logoNorm}
                 min={0} max={100} onChange={setLogoNorm} />
               <SliderField label="Gap between logos" value={logoHGap}

@@ -82,6 +82,7 @@ export interface AutoDesign {
   logoRowGap: number;
   logoGapBelow: number;
   logoNorm: number;         // 0–100; 0 = natural AR, 100 = all logos same width
+  logoFirstRow: number;     // target bands on first row (0 = auto)
   // Names layout
   nameHGap: number;         // px between names (separator lives here)
   nameRowGap: number;       // px between name rows

@@ -255,11 +255,16 @@ export async function computeAutoLayout(
     // Dividing by (1 + logoRowGap/100) approximates the gap overhead so K_logo
     // doesn't overestimate how many rows fit in the budget.
     // Use floor (not round) so the chosen K is always within budget.
-    const K_logo        = Math.max(1, Math.min(
+    const K_logo_auto   = Math.max(1, Math.min(
       logoBands.length,
       Math.floor(Math.sqrt(Math.max(0, logoBudget) * totalEffAR /
         (logoInnerW * (1 + design.logoRowGap / 100))))
     ));
+    // logoFirstRow: if set (> 0), user controls bands on the first row → derive K
+    const logoFirstRow  = design.logoFirstRow ?? 0;
+    const K_logo        = logoFirstRow > 0
+      ? Math.max(1, Math.min(logoBands.length, Math.ceil(logoBands.length / logoFirstRow)))
+      : K_logo_auto;
 
     const partition = partitionEqualWeight(effARs, K_logo);
     let y = logoStartY;
@@ -411,6 +416,7 @@ export function defaultAutoDesign(
     logoRowGap:     15,  // % of row height (proportional gap)
     logoGapBelow:   16,
     logoNorm:       60,
+    logoFirstRow:   0,   // 0 = auto
     nameHGap:       28,
     nameRowGap:     4,
     nameNorm:       0,
