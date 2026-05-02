@@ -120,7 +120,7 @@ export async function renderAutoDesignToCanvas(
   transparent = false,
   pixelScale  = 1,
   skipLogoRows = false,
-): Promise<void> {
+): Promise<{ overflow: boolean }> {
   await ensureFontLoaded();
 
   const layout = await computeAutoLayout(design, bands, pixelScale);
@@ -161,6 +161,8 @@ export async function renderAutoDesignToCanvas(
       eventYear.separatorColor ?? '#E6007E',
     );
   }
+
+  return { overflow: layout.overflow };
 }
 
 // ── Thumbnail helper ──────────────────────────────────────────────────────────

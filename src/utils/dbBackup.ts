@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { EventYear, Band, Design } from '../types';
+import type { EventYear, Band, Design, AutoDesign } from '../types';
 
 // ── Blob ↔ base64 helpers ────────────────────────────────────────────────────
 
@@ -29,21 +29,27 @@ interface BandSerialized extends Omit<Band, 'photoBlob' | 'logoBlob' | 'composit
   compositeBlob?: string;
 }
 
+interface AutoDesignSerialized extends Omit<AutoDesign, 'thumbnailBlob'> {
+  thumbnailBlob?: string;
+}
+
 interface BackupFile {
-  version:    1;
-  exportedAt: number;
-  eventYears: EventYear[];
-  bands:      BandSerialized[];
-  designs:    Design[];
+  version:     1 | 2;
+  exportedAt:  number;
+  eventYears:  EventYear[];
+  bands:       BandSerialized[];
+  designs:     Design[];
+  autoDesigns?: AutoDesignSerialized[];
 }
 
 // ── Export ───────────────────────────────────────────────────────────────────
 
 export async function createBackupJSON(): Promise<string> {
-  const [eventYears, bands, designs] = await Promise.all([
+  const [eventYears, bands, designs, autoDesigns] = await Promise.all([
     db.eventYears.toArray(),
     db.bands.toArray(),
     db.designs.toArray(),
+    db.autoDesigns.toArray(),
   ]);
 
   const serialisedBands: BandSerialized[] = await Promise.all(
@@ -58,12 +64,23 @@ export async function createBackupJSON(): Promise<string> {
     })
   );
 
+  const serialisedAutoDesigns: AutoDesignSerialized[] = await Promise.all(
+    autoDesigns.map(async ad => {
+      const { thumbnailBlob, ...rest } = ad;
+      return {
+        ...rest,
+        thumbnailBlob: thumbnailBlob ? await blobToBase64(thumbnailBlob) : undefined,
+      };
+    })
+  );
+
   const backup: BackupFile = {
-    version: 1,
+    version: 2,
     exportedAt: Date.now(),
     eventYears,
     bands: serialisedBands,
     designs,
+    autoDesigns: serialisedAutoDesigns,
   };
 
   return JSON.stringify(backup);
@@ -87,7 +104,9 @@ export async function importBackup(file: File): Promise<void> {
   const text   = await file.text();
   const backup = JSON.parse(text) as BackupFile;
 
-  if (backup.version !== 1) throw new Error('Unsupported backup version');
+  if (backup.version !== 1 && backup.version !== 2) {
+    throw new Error('Unsupported backup version');
+  }
 
   // Map old IDs → new IDs so relations stay intact.
   const yearIdMap: Record<number, number> = {};
@@ -115,5 +134,15 @@ export async function importBackup(file: File): Promise<void> {
       ...rest,
       eventYearId: yearIdMap[eventYearId] ?? eventYearId,
     } as Design);
+  }
+
+  // Auto-designs — only present in version 2 backups
+  for (const ad of backup.autoDesigns ?? []) {
+    const { id: _id, eventYearId, thumbnailBlob, ...rest } = ad;
+    await db.autoDesigns.add({
+      ...rest,
+      eventYearId:   yearIdMap[eventYearId] ?? eventYearId,
+      thumbnailBlob: thumbnailBlob ? base64ToBlob(thumbnailBlob) : undefined,
+    } as AutoDesign);
   }
 }

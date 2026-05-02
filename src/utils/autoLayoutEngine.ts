@@ -166,6 +166,7 @@ export interface AutoLayoutResult {
   nameRows:     RowLayout[];
   fontSize:     number;
   effLogoARs:   number[];   // effective AR for each logo band (order matches logoBands)
+  overflow:     boolean;    // true when any row extends below the canvas bottom
 }
 
 // ── Main layout function ──────────────────────────────────────────────────────
@@ -228,6 +229,11 @@ export async function computeAutoLayout(
     }
   }
 
+  // Side padding: logo + name sections are inset when photos are present,
+  // so their left/right edges align with the photo content rather than the raw canvas edge.
+  const SECTION_SIDE_PAD = 25; // px at 1× scale
+  const sidePad = photoBands.length > 0 ? SECTION_SIDE_PAD * s : 0;
+
   // ── Logo section ───────────────────────────────────────────────────────────
   const rawARs   = await Promise.all(logoBands.map(b => getLogoAR(b.logoBlob)));
   const effARs   = rawARs.map(ar => effectiveLogoAR(ar, design.logoNorm));
@@ -242,11 +248,17 @@ export async function computeAutoLayout(
 
   if (logoBands.length > 0 && totalEffAR > 0) {
     // Budget: rough estimate for available logo height
+    const logoInnerW    = CW - 2 * sidePad;
     const nameEstH      = CH * 0.15;
     const logoBudget    = CH - logoStartY - logoGapBelow - nameEstH;
+    // Each logo row adds a gap of `logoRowGap % of rowH` after it (except the last).
+    // Dividing by (1 + logoRowGap/100) approximates the gap overhead so K_logo
+    // doesn't overestimate how many rows fit in the budget.
+    // Use floor (not round) so the chosen K is always within budget.
     const K_logo        = Math.max(1, Math.min(
       logoBands.length,
-      Math.round(Math.sqrt(Math.max(0, logoBudget) * totalEffAR / CW))
+      Math.floor(Math.sqrt(Math.max(0, logoBudget) * totalEffAR /
+        (logoInnerW * (1 + design.logoRowGap / 100))))
     ));
 
     const partition = partitionEqualWeight(effARs, K_logo);
@@ -258,13 +270,13 @@ export async function computeAutoLayout(
       const row      = idxs.map(i => logoBands[i]);
       const rowARs   = idxs.map(i => effARs[i]);
       const n        = row.length;
-      const availW   = CW - Math.max(0, n - 1) * logoHGap;
+      const availW   = logoInnerW - Math.max(0, n - 1) * logoHGap;
       const sumAR    = rowARs.reduce((a, b) => a + b, 0);
       const rowH     = sumAR > 0 ? availW / sumAR : 60 * s;
 
       const ws: number[] = rowARs.map(ar => ar * rowH);
       const xs: number[] = [];
-      let x = 0;
+      let x = sidePad;
       for (let i = 0; i < n; i++) {
         xs.push(x);
         x += ws[i] + (i < n - 1 ? logoHGap : 0);
@@ -283,6 +295,7 @@ export async function computeAutoLayout(
     ? logoStartY + logoSectionH + logoGapBelow
     : logoStartY;
 
+  const nameInnerW = CW - 2 * sidePad;
   const nameRows: RowLayout[] = [];
   let fontSize = 30 * s;
 
@@ -295,7 +308,7 @@ export async function computeAutoLayout(
     const FONT_REF   = 30 * s;
     const CHAR_W     = 0.55;
     const K_name_byW = Math.max(1, Math.min(nameBands.length,
-      Math.round(totalNameW * FONT_REF * CHAR_W / CW),
+      Math.round(totalNameW * FONT_REF * CHAR_W / nameInnerW),
     ));
 
     // Available vertical space for names
@@ -315,9 +328,12 @@ export async function computeAutoLayout(
     const K_name        = Math.max(1, Math.min(nameBands.length, K_name_user));
     const namesAvailH   = Math.max(K_name * 20 * s, namesAvailH_raw);
 
-    // Font size is determined only by available height ÷ K_name.
-    // nameRowGap adds spacing between rows WITHOUT shrinking the text.
-    fontSize = Math.max(12 * s, Math.min(maxFontSize, namesAvailH / K_name));
+    // Font size: subtract the total inter-row gap height before dividing,
+    // so K_name rows of fontSize + (K_name-1) gaps fits exactly in namesAvailH.
+    const totalNameGapH = Math.max(0, K_name - 1) * nameRowGap;
+    fontSize = Math.max(12 * s, Math.min(maxFontSize,
+      (namesAvailH - totalNameGapH) / K_name,
+    ));
 
     const partition = partitionEqualWeight(nameWidths, K_name);
     let y = nameStartY;
@@ -328,12 +344,12 @@ export async function computeAutoLayout(
       const rowWidths = idxs.map(i => nameWidths[i]);
       const n         = row.length;
       const totalW    = rowWidths.reduce((a, b) => a + b, 0);
-      const availW    = CW - Math.max(0, n - 1) * nameHGap;
+      const availW    = nameInnerW - Math.max(0, n - 1) * nameHGap;
       const scale     = totalW > 0 ? availW / totalW : 1;
 
       const ws = rowWidths.map(w => w * scale);
       const xs: number[] = [];
-      let x = 0;
+      let x = sidePad;
       for (let i = 0; i < n; i++) {
         xs.push(x);
         x += ws[i] + (i < n - 1 ? nameHGap : 0);
@@ -344,6 +360,11 @@ export async function computeAutoLayout(
     }
   }
 
+  // Detect overflow: any row whose bottom edge exceeds the canvas height
+  const allRows = [...photoRows, ...logoRows, ...nameRows];
+  const maxBottom = allRows.reduce((max, row) => Math.max(max, row.y + row.h), 0);
+  const overflow = maxBottom > CH;
+
   return {
     canvasWidth:  CW,
     canvasHeight: CH,
@@ -352,6 +373,7 @@ export async function computeAutoLayout(
     nameRows,
     fontSize,
     effLogoARs: effARs,
+    overflow,
   };
 }
 
@@ -360,17 +382,15 @@ export async function computeAutoLayout(
 /** Compute sensible defaults for a new auto-design given the band list. */
 export function defaultAutoDesign(
   eventYearId: number,
-  totalAvailable: number,
+  allBands: Band[],
 ): Omit<AutoDesign, 'id' | 'thumbnailBlob'> {
-  const total  = totalAvailable;
-  const { w: CW, h: CH } = canvasDimensions(1.0);
+  const total  = allBands.length;
 
-  // Photo: find how many bands fit in ~30% of canvas height with a natural row
-  // rowH = (CW / n) * COMPOSITE_AR ≤ 0.30 * CH  →  n ≥ CW * COMPOSITE_AR / (0.30 * CH)
-  const minPhotoBands = Math.ceil(CW * COMPOSITE_AR / (0.30 * CH));
-  // Use one photo row if we have enough bands
-  const photoFirstRow = Math.max(3, minPhotoBands);
-  const photoBandCount = total >= photoFirstRow * 2 ? photoFirstRow : (total <= 5 ? total : 0);
+  // Photo headliners: 4 bands in one row for large lineups.
+  // On a 1:1 canvas each is 270 px wide → natural height 360 px (below the CH×0.4 cap
+  // of 432 px), so photos are never cropped at the default aspect ratio.
+  const photoBandCount = total > 10 ? 4 : total > 5 ? 3 : total;
+  const photoFirstRow  = photoBandCount; // single row of headliners
 
   const remaining = total - photoBandCount;
   const logoBandCount = Math.max(0, Math.min(remaining, Math.round(remaining * 0.65)));

@@ -75,6 +75,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [saving,         setSaving]         = useState(false);
   const [exporting,      setExporting]      = useState(false);
   const [exportingPdf,   setExportingPdf]   = useState(false);
+  const [overflow,       setOverflow]       = useState(false);
 
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const renderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,7 +101,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       setNameNorm(existing.nameNorm ?? 0);
       setNameFirstRow(existing.nameFirstRow ?? 0);
     } else if (allBands && allBands.length > 0 && !designId) {
-      const d = defaultAutoDesign(yearId, allBands.length);
+      const d = defaultAutoDesign(yearId, allBands);
       setTotalBands(d.totalBands);
       setPhotoBandCount(d.photoBandCount);
       setLogoBandCount(d.logoBandCount);
@@ -148,8 +149,9 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       if (!canvasRef.current) return;
       const design = buildDesign();
       try {
-        await renderAutoDesignToCanvas(canvasRef.current, design, allBands, year);
-      } catch { /* ignore render errors */ }
+        const result = await renderAutoDesignToCanvas(canvasRef.current, design, allBands, year);
+        setOverflow(result.overflow);
+      } catch { setOverflow(false); /* ignore render errors */ }
     }, 250);
     return () => { if (renderTimer.current) clearTimeout(renderTimer.current); };
   }, [allBands, year, buildDesign]);
@@ -335,7 +337,12 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
         {/* Preview */}
         <div className="ade-preview-wrap">
           <div className="ade-preview-inner">
-            <canvas ref={canvasRef} className="ade-canvas" />
+            <canvas ref={canvasRef} className={`ade-canvas${overflow ? ' ade-canvas--overflow' : ''}`} />
+            {overflow && (
+              <div className="ade-overflow-msg">
+                ⚠ Some elements extend beyond the canvas — reduce band counts, row sizes, or gaps
+              </div>
+            )}
           </div>
         </div>
 
