@@ -194,7 +194,7 @@ export async function exportAutoDesignAsPng(
   scale: 1 | 2 | 4 = 1,
 ): Promise<void> {
   const canvas = document.createElement('canvas');
-  await renderAutoDesignToCanvas(canvas, design, bands, eventYear, false, scale);
+  await renderAutoDesignToCanvas(canvas, design, bands, eventYear, /* transparent */ true, scale);
 
   const suffix = scale > 1 ? `@${scale}x` : '';
   return new Promise(resolve => {
