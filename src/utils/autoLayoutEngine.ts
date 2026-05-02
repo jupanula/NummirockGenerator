@@ -185,11 +185,16 @@ export async function computeAutoLayout(
       const row     = photoBands.slice(bandIdx, bandIdx + n);
       bandIdx      += n;
 
-      const availW  = CW - Math.max(0, n - 1) * design.photoHGap;
-      const bW      = availW / n;
-      const rowH    = bW * COMPOSITE_AR;
-
-      const xs = row.map((_, i) => i * (bW + design.photoHGap));
+      const availW    = CW - Math.max(0, n - 1) * design.photoHGap;
+      const naturalBW = availW / n;
+      const naturalH  = naturalBW * COMPOSITE_AR;
+      // Cap row height to 40 % of canvas to prevent overflow on wide canvases
+      const rowH = Math.min(naturalH, CH * 0.4);
+      const bW   = rowH / COMPOSITE_AR;
+      // Centre bands horizontally if they no longer fill full canvas width
+      const usedW = n * bW + Math.max(0, n - 1) * design.photoHGap;
+      const xOff  = (CW - usedW) / 2;
+      const xs = row.map((_, i) => xOff + i * (bW + design.photoHGap));
       const ws = row.map(() => bW);
 
       photoRows.push({ bands: row, y, h: rowH, xs, ws });
@@ -259,10 +264,30 @@ export async function computeAutoLayout(
   if (nameBands.length > 0) {
     const nameWidths  = nameBands.map(b => normNameWidth(b.name));
     const totalNameW  = nameWidths.reduce((a, b) => a + b, 0);
-    const K_name      = Math.max(1, Math.min(nameBands.length, Math.round(totalNameW / CW)));
-    const namesAvailH = Math.max(K_name * 20, CH - nameStartY);
 
-    fontSize = Math.max(12, (namesAvailH - Math.max(0, K_name - 1) * design.nameRowGap) / K_name);
+    // Convert normNameWidth units → approximate pixels at a 30 px reference font
+    // (normNameWidth ≈ charCount × scale; ×30×0.55 gives pixel width at 30 px)
+    const FONT_REF   = 30;
+    const CHAR_W     = 0.55;
+    const K_name_byW = Math.max(1, Math.min(nameBands.length,
+      Math.round(totalNameW * FONT_REF * CHAR_W / CW),
+    ));
+
+    // Available vertical space for names
+    const namesAvailH_raw = Math.max(0, CH - nameStartY);
+    // Max font size: 8 % of canvas height keeps separators tasteful
+    const maxFontSize   = Math.max(16, CH * 0.08);
+    // If the height-derived font size would exceed maxFontSize, add more rows
+    const fontIfK       = namesAvailH_raw / Math.max(1, K_name_byW);
+    const K_name_byH    = fontIfK > maxFontSize
+      ? Math.ceil(namesAvailH_raw / maxFontSize)
+      : K_name_byW;
+    const K_name        = Math.max(1, Math.min(nameBands.length, K_name_byH));
+    const namesAvailH   = Math.max(K_name * 20, namesAvailH_raw);
+
+    fontSize = Math.max(12, Math.min(maxFontSize,
+      (namesAvailH - Math.max(0, K_name - 1) * design.nameRowGap) / K_name,
+    ));
 
     const partition = partitionEqualWeight(nameWidths, K_name);
     let y = nameStartY;
