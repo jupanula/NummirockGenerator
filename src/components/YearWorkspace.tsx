@@ -4,6 +4,7 @@ import type { NavState, Tab } from '../types';
 import BandManager from './BandManager';
 import YearSettings from './YearSettings';
 import DesignList from './DesignList';
+import AutoDesignList from './AutoDesignList';
 import './YearWorkspace.css';
 
 interface Props {
@@ -20,6 +21,7 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bands', label: 'Bands' },
     { id: 'designs', label: 'Designs' },
+    { id: 'auto-designs', label: 'Auto-Designs' },
     { id: 'settings', label: 'Year Settings' },
   ];
 
@@ -56,6 +58,14 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
             yearId={yearId}
             onOpenEditor={(designId) =>
               onNavigate({ view: 'design-editor', yearId, designId })
+            }
+          />
+        )}
+        {tab === 'auto-designs' && (
+          <AutoDesignList
+            yearId={yearId}
+            onOpenEditor={(designId) =>
+              onNavigate({ view: 'auto-design-editor', yearId, designId })
             }
           />
         )}

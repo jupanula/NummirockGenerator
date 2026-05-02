@@ -4,6 +4,7 @@ import { db } from './db';
 import EventYearList from './components/EventYearList';
 import YearWorkspace from './components/YearWorkspace';
 import DesignEditor from './components/DesignEditor';
+import AutoDesignEditor from './components/AutoDesignEditor';
 import {
   writeAutoBackup,
   isBackupConfigured,
@@ -124,6 +125,15 @@ export default function App() {
           onExportScaleChange={handleExportScaleChange}
           onBack={() =>
             setNav({ view: 'workspace', yearId: nav.yearId, tab: 'designs' })
+          }
+        />
+      )}
+      {nav.view === 'auto-design-editor' && (
+        <AutoDesignEditor
+          yearId={nav.yearId}
+          designId={nav.designId}
+          onBack={() =>
+            setNav({ view: 'workspace', yearId: nav.yearId, tab: 'auto-designs' })
           }
         />
       )}

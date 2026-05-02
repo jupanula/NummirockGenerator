@@ -6,7 +6,7 @@ import { renderDesignToCanvas } from '../utils/canvasRenderer';
 import { exportAsPng, exportAsPdf } from '../utils/exportUtils';
 import './DesignEditor.css';
 
-function CollapsibleSection({ title, children, defaultOpen = true }: {
+function CollapsibleSection({ title, children, defaultOpen = false }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;

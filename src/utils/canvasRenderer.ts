@@ -5,7 +5,7 @@ export const COMPOSITE_H = 640;
 
 let fontLoaded = false;
 
-async function ensureFontLoaded(): Promise<void> {
+export async function ensureFontLoaded(): Promise<void> {
   if (fontLoaded) return;
   try {
     const font = new FontFace('NummirockFont', 'url(./fonts/NummirockOneThreeCustomThre.otf)');
@@ -17,7 +17,7 @@ async function ensureFontLoaded(): Promise<void> {
   }
 }
 
-function blobToImage(blob: Blob): Promise<HTMLImageElement> {
+export function blobToImage(blob: Blob): Promise<HTMLImageElement> {
   if (!(blob instanceof Blob)) return Promise.reject(new Error('not a Blob'));
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
@@ -57,7 +57,7 @@ function whiteText(text: string): string {
 
 // Render an SVG blob at an explicit pixel size, whitened.
 // Setting explicit dimensions prevents browsers from defaulting to 300×150.
-async function svgBlobToWhiteImageSized(blob: Blob, w: number, h: number): Promise<HTMLImageElement> {
+export async function svgBlobToWhiteImageSized(blob: Blob, w: number, h: number): Promise<HTMLImageElement> {
   const raw = await blob.text();
   const whitened = whiteText(raw);
   const parser = new DOMParser();
@@ -90,7 +90,7 @@ export function drawImageCover(
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-function drawImageContain(
+export function drawImageContain(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   x: number, y: number, w: number, h: number
