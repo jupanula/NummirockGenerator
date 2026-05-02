@@ -100,7 +100,7 @@ function renderNameRow(
   const rowScale = rowFontSize / fontSize; // fraction of section fontSize
 
   const baseline = row.y + rowFontSize * 0.85;
-  const midY     = row.y + row.h * 0.60;
+  const midY     = row.y + rowFontSize * 0.60;
   const sepSize  = Math.round(rowFontSize * 0.45);
 
   ctx.font         = `${rowFontSize}px NummirockFont, sans-serif`;
@@ -174,10 +174,27 @@ export async function renderAutoDesignToCanvas(
     }
   }
 
-  // Name rows — each row sets its own font size based on measured text widths
+  // Name rows — compute a single font size across all rows so every row is identical
+  let globalNameFontSize = layout.fontSize;
+  for (const row of layout.nameRows) {
+    const n = row.bands.length;
+    if (n === 0) continue;
+    const names = row.bands.map(b => b.name.toUpperCase());
+    const rowLeft  = row.xs[0];
+    const rowRight = row.xs[n - 1] + row.ws[n - 1];
+    const nameHGap   = n > 1 ? row.xs[1] - (row.xs[0] + row.ws[0]) : 0;
+    const availTextW = (rowRight - rowLeft) - Math.max(0, n - 1) * nameHGap;
+    ctx.font = `${layout.fontSize}px NummirockFont, sans-serif`;
+    const totalMeasured = names.reduce((sum, name) => sum + Math.max(1, ctx.measureText(name).width), 0);
+    const rowFontSize = totalMeasured > 0
+      ? Math.min(layout.fontSize, layout.fontSize * availTextW / totalMeasured)
+      : layout.fontSize;
+    if (rowFontSize < globalNameFontSize) globalNameFontSize = rowFontSize;
+  }
+
   for (const row of layout.nameRows) {
     renderNameRow(
-      ctx, row, layout.fontSize,
+      ctx, row, globalNameFontSize,
       eventYear.nameTextColor ?? '#ffffff',
       eventYear.separatorChar ?? '■',
       eventYear.separatorColor ?? '#E6007E',
