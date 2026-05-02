@@ -70,16 +70,19 @@ function renderNameRow(
   separatorChar: string,
   separatorColor: string,
 ): void {
-  const baseline = row.y + fontSize * 0.85; // approximate cap-height baseline
+  const baseline  = row.y + fontSize * 0.85; // approximate cap-height baseline
+  const midY      = row.y + row.h / 2;       // vertical centre of the row
+  const sepSize   = Math.round(fontSize * 0.45); // separator slightly smaller than text
 
   for (let i = 0; i < row.bands.length; i++) {
-    const name = row.bands[i].name;
+    const name = row.bands[i].name.toUpperCase();
     const x    = row.xs[i];
     const w    = row.ws[i];
 
-    ctx.fillStyle   = textColor;
+    ctx.fillStyle    = textColor;
     ctx.textBaseline = 'alphabetic';
-    ctx.textAlign   = 'left';
+    ctx.textAlign    = 'left';
+    ctx.font         = `${fontSize}px NummirockFont, sans-serif`;
 
     const measured = ctx.measureText(name).width;
     if (measured <= 0) continue;
@@ -93,9 +96,11 @@ function renderNameRow(
     // Separator between names (not before first, not after last)
     if (i < row.bands.length - 1) {
       const gapCentreX = row.xs[i + 1] - (row.xs[i + 1] - (x + w)) / 2;
-      ctx.fillStyle  = separatorColor;
-      ctx.textAlign  = 'center';
-      ctx.fillText(separatorChar, gapCentreX, baseline);
+      ctx.fillStyle    = separatorColor;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font         = `${sepSize}px NummirockFont, sans-serif`;
+      ctx.fillText(separatorChar, gapCentreX, midY);
     }
   }
 }
