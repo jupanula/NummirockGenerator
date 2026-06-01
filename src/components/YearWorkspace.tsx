@@ -3,8 +3,8 @@ import { db } from '../db';
 import type { NavState, Tab } from '../types';
 import BandManager from './BandManager';
 import YearSettings from './YearSettings';
-import DesignList from './DesignList';
 import AutoDesignList from './AutoDesignList';
+import Scheduler from './Scheduler';
 import './YearWorkspace.css';
 
 interface Props {
@@ -21,7 +21,7 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bands', label: 'Bands' },
     { id: 'designs', label: 'Designs' },
-    { id: 'auto-designs', label: 'Auto-Designs' },
+    { id: 'scheduler', label: 'Scheduler' },
     { id: 'settings', label: 'Year Settings' },
   ];
 
@@ -54,14 +54,6 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
       <main className="workspace-content">
         {tab === 'bands' && <BandManager yearId={yearId} />}
         {tab === 'designs' && (
-          <DesignList
-            yearId={yearId}
-            onOpenEditor={(designId) =>
-              onNavigate({ view: 'design-editor', yearId, designId })
-            }
-          />
-        )}
-        {tab === 'auto-designs' && (
           <AutoDesignList
             yearId={yearId}
             onOpenEditor={(designId) =>
@@ -69,6 +61,7 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
             }
           />
         )}
+        {tab === 'scheduler' && <Scheduler yearId={yearId} />}
         {tab === 'settings' && <YearSettings yearId={yearId} />}
       </main>
     </div>

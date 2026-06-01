@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Band } from '../types';
+import type { BandScheduleSummary } from './BandManager';
 import './BandCard.css';
 
 interface Props {
   band: Band;
+  scheduleSummaries: BandScheduleSummary[];
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function BandCard({ band, onEdit, onDelete }: Props) {
+export default function BandCard({ band, scheduleSummaries, onEdit, onDelete }: Props) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -29,6 +31,9 @@ export default function BandCard({ band, onEdit, onDelete }: Props) {
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
+
+  const slotCount = scheduleSummaries.length;
+  const hiddenSlotCount = scheduleSummaries.filter(s => s.slot.visibility === 'hidden').length;
 
   useEffect(() => {
     let url: string;
@@ -76,6 +81,17 @@ export default function BandCard({ band, onEdit, onDelete }: Props) {
       <div className="band-card-info">
         <span className="band-card-name">{band.name}</span>
         {band.isHeadliner && <span className="headliner-badge">Headliner</span>}
+        {band.includeInDesigns === false && (
+          <span className="band-status-badge muted">Hidden from designs</span>
+        )}
+        <span className={`band-status-badge ${slotCount === 0 ? 'warning' : 'ok'}`}>
+          {slotCount === 0 ? 'No slot' : `${slotCount} slot${slotCount === 1 ? '' : 's'}`}
+        </span>
+        {hiddenSlotCount > 0 && (
+          <span className="band-status-badge muted">
+            {hiddenSlotCount === slotCount ? 'Hidden slot' : 'Includes hidden slot'}
+          </span>
+        )}
       </div>
 
       <div className="band-card-actions">

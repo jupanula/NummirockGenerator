@@ -5,7 +5,7 @@
 }
 
 .settings-inner {
-  max-width: 520px;
+  max-width: 920px;
 }
 
 .year-settings h2 {
@@ -33,6 +33,136 @@
   letter-spacing: 0.06em;
   color: var(--text-secondary);
   margin-bottom: 18px;
+}
+
+.settings-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: -8px 0 14px;
+}
+
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.settings-row.dragging {
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.settings-drag-handle {
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: grab;
+  user-select: none;
+}
+
+.settings-drag-handle:active {
+  cursor: grabbing;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-add-form {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.event-day-range {
+  grid-template-columns: minmax(160px, 1fr) minmax(160px, 1fr) auto;
+}
+
+.event-day-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.settings-generated-summary {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.stage-add {
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+}
+
+.stage-row {
+  display: grid;
+  grid-template-columns: auto 92px minmax(160px, 1fr) auto auto;
+}
+
+.stage-logo-preview {
+  width: 92px;
+  height: 48px;
+  border-radius: 4px;
+  background: #000;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.stage-logo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.mini-btn {
+  padding: 5px 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.mini-file-btn {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 180px;
+  text-overflow: ellipsis;
+}
+
+.mini-file-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .color-row {

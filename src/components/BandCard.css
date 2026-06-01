@@ -101,6 +101,33 @@
   letter-spacing: 0.05em;
 }
 
+.band-status-badge {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.band-status-badge.muted {
+  color: #d8a7c5;
+  border-color: rgba(230, 0, 126, 0.35);
+}
+
+.band-status-badge.warning {
+  color: #ffc66d;
+  border-color: rgba(255, 198, 109, 0.38);
+}
+
+.band-status-badge.ok {
+  color: #8ee6a2;
+  border-color: rgba(142, 230, 162, 0.35);
+}
+
 .band-card-actions {
   display: flex;
   gap: 6px;

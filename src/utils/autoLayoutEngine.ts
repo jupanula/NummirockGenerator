@@ -387,7 +387,7 @@ export async function computeAutoLayout(
 
 // ── Default design factory ────────────────────────────────────────────────────
 
-/** Compute sensible defaults for a new auto-design given the band list. */
+/** Compute sensible defaults for a new design given the band list. */
 export function defaultAutoDesign(
   eventYearId: number,
   allBands: Band[],
@@ -406,7 +406,7 @@ export function defaultAutoDesign(
   const now = Date.now();
   return {
     eventYearId,
-    name: 'Untitled Auto-Design',
+    name: 'Untitled Design',
     aspectRatio:    1.0,
     totalBands:     total,
     photoBandCount,

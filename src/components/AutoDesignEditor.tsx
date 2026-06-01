@@ -54,7 +54,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   );
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [name,           setName]           = useState('Untitled Auto-Design');
+  const [name,           setName]           = useState('Untitled Design');
   const [aspectRatio,    setAspectRatio]    = useState(1.0);
   const [totalBands,     setTotalBands]     = useState(0);
   const [photoBandCount, setPhotoBandCount] = useState(0);
@@ -73,6 +73,7 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
   const [nameNorm,       setNameNorm]       = useState(0);
   const [nameFirstRow,   setNameFirstRow]   = useState(0);
   const [nameFontScale,  setNameFontScale]  = useState(100);
+  const [includeHiddenBands, setIncludeHiddenBands] = useState(false);
   const [exportScale,    setExportScale]    = useState<1 | 2 | 4>(1);
   const [saving,         setSaving]         = useState(false);
   const [exporting,      setExporting]      = useState(false);
@@ -104,8 +105,10 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
       setNameNorm(existing.nameNorm ?? 0);
       setNameFirstRow(existing.nameFirstRow ?? 0);
       setNameFontScale(existing.nameFontScale ?? 100);
+      setIncludeHiddenBands(existing.includeHiddenBands ?? false);
     } else if (allBands && allBands.length > 0 && !designId) {
-      const d = defaultAutoDesign(yearId, allBands);
+      const designBands = allBands.filter(b => b.includeInDesigns !== false);
+      const d = defaultAutoDesign(yearId, designBands);
       setTotalBands(d.totalBands);
       setPhotoBandCount(d.photoBandCount);
       setLogoBandCount(d.logoBandCount);
@@ -115,8 +118,11 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
 
   // Keep totalBands in sync when band list changes (new design only)
   useEffect(() => {
-    if (!existing && allBands) setTotalBands(allBands.length);
-  }, [allBands, existing]);
+    if (!existing && allBands) {
+      const designBands = allBands.filter(b => includeHiddenBands || b.includeInDesigns !== false);
+      setTotalBands(designBands.length);
+    }
+  }, [allBands, existing, includeHiddenBands]);
 
   // ── Build design snapshot ──────────────────────────────────────────────────
   const buildDesign = useCallback((): AutoDesign => ({
@@ -140,12 +146,14 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     nameNorm,
     nameFirstRow,
     nameFontScale,
+    includeHiddenBands,
     createdAt: existing?.createdAt ?? Date.now(),
     updatedAt: Date.now(),
   }), [yearId, name, aspectRatio, totalBands, photoBandCount, logoBandCount,
       photoFirstRow, photoHGap, photoRowGap, photoGapBelow,
       logoHGap, logoRowGap, logoGapBelow, logoNorm, logoFirstRow,
-      nameHGap, nameRowGap, nameNorm, nameFirstRow, nameFontScale, existing]);
+      nameHGap, nameRowGap, nameNorm, nameFirstRow, nameFontScale,
+      includeHiddenBands, existing]);
 
   // ── Debounced render ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -154,8 +162,9 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     renderTimer.current = setTimeout(async () => {
       if (!canvasRef.current) return;
       const design = buildDesign();
+      const designBands = allBands.filter(b => design.includeHiddenBands || b.includeInDesigns !== false);
       try {
-        const result = await renderAutoDesignToCanvas(canvasRef.current, design, allBands, year);
+        const result = await renderAutoDesignToCanvas(canvasRef.current, design, designBands, year);
         setOverflow(result.overflow);
       } catch { setOverflow(false); /* ignore render errors */ }
     }, 250);
@@ -167,7 +176,8 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     if (!allBands || !year) return;
     setSaving(true);
     const design  = buildDesign();
-    const thumbBlob = await generateAutoThumbnail(design, allBands, year).catch(() => undefined);
+    const designBands = allBands.filter(b => design.includeHiddenBands || b.includeInDesigns !== false);
+    const thumbBlob = await generateAutoThumbnail(design, designBands, year).catch(() => undefined);
     const toSave  = { ...design, thumbnailBlob: thumbBlob };
     if (designId) {
       await db.autoDesigns.update(designId, toSave);
@@ -183,7 +193,9 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     if (!allBands || !year) return;
     setExporting(true);
     try {
-      await exportAutoDesignAsPng(buildDesign(), allBands, year, exportScale);
+      const design = buildDesign();
+      const designBands = allBands.filter(b => design.includeHiddenBands || b.includeInDesigns !== false);
+      await exportAutoDesignAsPng(design, designBands, year, exportScale);
     } finally {
       setExporting(false);
     }
@@ -194,16 +206,29 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
     if (!allBands || !year) return;
     setExportingPdf(true);
     try {
-      await exportAutoDesignAsPdf(buildDesign(), allBands, year);
+      const design = buildDesign();
+      const designBands = allBands.filter(b => design.includeHiddenBands || b.includeInDesigns !== false);
+      await exportAutoDesignAsPdf(design, designBands, year);
     } finally {
       setExportingPdf(false);
     }
   }
 
   // ── Derived values ─────────────────────────────────────────────────────────
-  const maxBands      = allBands?.length ?? 0;
+  const designBandsCount = allBands?.filter(b => includeHiddenBands || b.includeInDesigns !== false).length ?? 0;
+  const hiddenBandsCount = allBands?.filter(b => b.includeInDesigns === false).length ?? 0;
+  const maxBands      = designBandsCount;
   const nameBandCount = Math.max(0, totalBands - photoBandCount - logoBandCount);
   const { w: CW, h: CH } = canvasDimensions(aspectRatio);
+
+  useEffect(() => {
+    if (totalBands <= maxBands) return;
+    setTotalBands(maxBands);
+    if (photoBandCount > maxBands) setPhotoBandCount(maxBands);
+    if (photoBandCount + logoBandCount > maxBands) {
+      setLogoBandCount(Math.max(0, maxBands - Math.min(photoBandCount, maxBands)));
+    }
+  }, [maxBands, totalBands, photoBandCount, logoBandCount]);
 
   // Clamp helper: when photo/logo counts change keep totals consistent
   function handlePhotoBandCount(v: number) {
@@ -283,6 +308,19 @@ export default function AutoDesignEditor({ yearId, designId, onBack }: Props) {
           {/* Bands */}
           <div className="ade-group">
             <div className="ade-group-title">Bands</div>
+            <label className="ade-checkbox">
+              <input
+                type="checkbox"
+                checked={includeHiddenBands}
+                onChange={e => setIncludeHiddenBands(e.target.checked)}
+              />
+              Include hidden bands
+            </label>
+            {hiddenBandsCount > 0 && (
+              <div className="ade-field-hint">
+                {hiddenBandsCount} hidden band{hiddenBandsCount === 1 ? '' : 's'} {includeHiddenBands ? 'included' : 'excluded'}
+              </div>
+            )}
             <SliderField label="Total bands shown" value={totalBands}
               min={0} max={maxBands} onChange={handleTotalBands} />
             <SliderField label={`Photo+Logo (first ${photoBandCount})`} value={photoBandCount}

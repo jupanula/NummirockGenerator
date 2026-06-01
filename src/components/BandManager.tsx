@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { db } from '../db';
-import type { Band } from '../types';
+import type { Band, EventDay, PerformanceSlot, Stage } from '../types';
 import { generateCompositeBlob } from '../utils/canvasRenderer';
 import BandForm from './BandForm';
 import BandCard from './BandCard';
@@ -20,9 +20,27 @@ interface Props {
   yearId: number;
 }
 
+export interface BandScheduleSummary {
+  slot: PerformanceSlot;
+  eventDay?: EventDay;
+  stage?: Stage;
+}
+
 export default function BandManager({ yearId }: Props) {
   const bands = useLiveQuery(
     () => db.bands.where('eventYearId').equals(yearId).sortBy('order'),
+    [yearId]
+  );
+  const eventDays = useLiveQuery(
+    () => db.eventDays.where('eventYearId').equals(yearId).sortBy('order'),
+    [yearId]
+  );
+  const stages = useLiveQuery(
+    () => db.stages.where('eventYearId').equals(yearId).sortBy('order'),
+    [yearId]
+  );
+  const slots = useLiveQuery(
+    () => db.performanceSlots.where('eventYearId').equals(yearId).sortBy('sortMinutes'),
     [yearId]
   );
   const [showForm, setShowForm] = useState(false);
@@ -33,6 +51,21 @@ export default function BandManager({ yearId }: Props) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
+
+  const summariesByBand = new Map<number, BandScheduleSummary[]>();
+  const daysById = new Map((eventDays ?? []).map(day => [day.id!, day]));
+  const stagesById = new Map((stages ?? []).map(stage => [stage.id!, stage]));
+
+  for (const slot of slots ?? []) {
+    if (slot.bandId == null) continue;
+    const next = summariesByBand.get(slot.bandId) ?? [];
+    next.push({
+      slot,
+      eventDay: daysById.get(slot.eventDayId),
+      stage: stagesById.get(slot.stageId),
+    });
+    summariesByBand.set(slot.bandId, next);
+  }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -107,6 +140,7 @@ export default function BandManager({ yearId }: Props) {
             yearId={yearId}
             band={editingBand}
             existingCount={bands?.length ?? 0}
+            scheduleSummaries={editingBand?.id ? summariesByBand.get(editingBand.id) ?? [] : []}
             onClose={() => { setShowForm(false); setEditingBand(null); }}
           />
         </div>
@@ -131,6 +165,7 @@ export default function BandManager({ yearId }: Props) {
               <BandCard
                 key={band.id}
                 band={band}
+                scheduleSummaries={band.id ? summariesByBand.get(band.id) ?? [] : []}
                 onEdit={() => { setEditingBand(band); setShowForm(true); }}
                 onDelete={() => handleDelete(band.id!)}
               />

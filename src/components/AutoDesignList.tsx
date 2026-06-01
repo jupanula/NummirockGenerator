@@ -69,22 +69,22 @@ export default function AutoDesignList({ yearId, onOpenEditor }: Props) {
 
   async function handleDelete(id: number, e: React.MouseEvent) {
     e.stopPropagation();
-    if (!confirm('Delete this auto-design?')) return;
+    if (!confirm('Delete this design?')) return;
     await db.autoDesigns.delete(id);
   }
 
   return (
     <div className="design-list">
       <div className="design-list-toolbar">
-        <span className="design-count">{designs?.length ?? 0} auto-designs</span>
+        <span className="design-count">{designs?.length ?? 0} designs</span>
         <button className="btn-primary" onClick={() => onOpenEditor(undefined)}>
-          + New Auto-Design
+          + New Design
         </button>
       </div>
       <div className="design-grid">
         {designs?.length === 0 && (
           <div className="design-list-empty">
-            No auto-designs yet. Create one to get started.
+            No designs yet. Create one to get started.
           </div>
         )}
         {designs?.map(d => (

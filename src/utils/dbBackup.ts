@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { EventYear, Band, Design, AutoDesign } from '../types';
+import type { EventYear, EventDay, Stage, PerformanceSlot, Band, Design, AutoDesign } from '../types';
 
 // ── Blob ↔ base64 helpers ────────────────────────────────────────────────────
 
@@ -33,10 +33,17 @@ interface AutoDesignSerialized extends Omit<AutoDesign, 'thumbnailBlob'> {
   thumbnailBlob?: string;
 }
 
+interface StageSerialized extends Omit<Stage, 'logoBlob'> {
+  logoBlob?: string;
+}
+
 interface BackupFile {
-  version:     1 | 2;
+  version:     1 | 2 | 3 | 4;
   exportedAt:  number;
   eventYears:  EventYear[];
+  eventDays?:  EventDay[];
+  stages?:     StageSerialized[];
+  performanceSlots?: PerformanceSlot[];
   bands:       BandSerialized[];
   designs:     Design[];
   autoDesigns?: AutoDesignSerialized[];
@@ -45,8 +52,11 @@ interface BackupFile {
 // ── Export ───────────────────────────────────────────────────────────────────
 
 export async function createBackupJSON(): Promise<string> {
-  const [eventYears, bands, designs, autoDesigns] = await Promise.all([
+  const [eventYears, eventDays, stages, performanceSlots, bands, designs, autoDesigns] = await Promise.all([
     db.eventYears.toArray(),
+    db.eventDays.toArray(),
+    db.stages.toArray(),
+    db.performanceSlots.toArray(),
     db.bands.toArray(),
     db.designs.toArray(),
     db.autoDesigns.toArray(),
@@ -74,10 +84,23 @@ export async function createBackupJSON(): Promise<string> {
     })
   );
 
+  const serialisedStages: StageSerialized[] = await Promise.all(
+    stages.map(async stage => {
+      const { logoBlob, ...rest } = stage;
+      return {
+        ...rest,
+        logoBlob: logoBlob ? await blobToBase64(logoBlob) : undefined,
+      };
+    })
+  );
+
   const backup: BackupFile = {
-    version: 2,
+    version: 4,
     exportedAt: Date.now(),
     eventYears,
+    eventDays,
+    stages: serialisedStages,
+    performanceSlots,
     bands: serialisedBands,
     designs,
     autoDesigns: serialisedAutoDesigns,
@@ -104,12 +127,15 @@ export async function importBackup(file: File): Promise<void> {
   const text   = await file.text();
   const backup = JSON.parse(text) as BackupFile;
 
-  if (backup.version !== 1 && backup.version !== 2) {
+  if (backup.version !== 1 && backup.version !== 2 && backup.version !== 3 && backup.version !== 4) {
     throw new Error('Unsupported backup version');
   }
 
   // Map old IDs → new IDs so relations stay intact.
   const yearIdMap: Record<number, number> = {};
+  const dayIdMap: Record<number, number> = {};
+  const stageIdMap: Record<number, number> = {};
+  const bandIdMap: Record<number, number> = {};
 
   for (const year of backup.eventYears) {
     const { id: oldId, ...rest } = year;
@@ -117,15 +143,46 @@ export async function importBackup(file: File): Promise<void> {
     if (oldId != null) yearIdMap[oldId] = newId as number;
   }
 
+  for (const day of backup.eventDays ?? []) {
+    const { id: oldId, eventYearId, ...rest } = day;
+    const newId = await db.eventDays.add({
+      ...rest,
+      eventYearId: yearIdMap[eventYearId] ?? eventYearId,
+    } as EventDay);
+    if (oldId != null) dayIdMap[oldId] = newId as number;
+  }
+
+  for (const stage of backup.stages ?? []) {
+    const { id: oldId, eventYearId, logoBlob, ...rest } = stage;
+    const newId = await db.stages.add({
+      ...rest,
+      eventYearId: yearIdMap[eventYearId] ?? eventYearId,
+      logoBlob: logoBlob ? base64ToBlob(logoBlob) : undefined,
+    } as Stage);
+    if (oldId != null) stageIdMap[oldId] = newId as number;
+  }
+
   for (const band of backup.bands) {
-    const { id: _id, eventYearId, photoBlob, logoBlob, compositeBlob, ...rest } = band;
-    await db.bands.add({
+    const { id: oldId, eventYearId, photoBlob, logoBlob, compositeBlob, ...rest } = band;
+    const newId = await db.bands.add({
       ...rest,
       eventYearId: yearIdMap[eventYearId] ?? eventYearId,
       photoBlob:     photoBlob     ? base64ToBlob(photoBlob)     : undefined,
       logoBlob:      logoBlob      ? base64ToBlob(logoBlob)      : undefined,
       compositeBlob: compositeBlob ? base64ToBlob(compositeBlob) : undefined,
     } as Band);
+    if (oldId != null) bandIdMap[oldId] = newId as number;
+  }
+
+  for (const slot of backup.performanceSlots ?? []) {
+    const { id: _id, eventYearId, eventDayId, stageId, bandId, ...rest } = slot;
+    await db.performanceSlots.add({
+      ...rest,
+      eventYearId: yearIdMap[eventYearId] ?? eventYearId,
+      eventDayId: dayIdMap[eventDayId] ?? eventDayId,
+      stageId: stageIdMap[stageId] ?? stageId,
+      bandId: bandId != null ? (bandIdMap[bandId] ?? bandId) : undefined,
+    } as PerformanceSlot);
   }
 
   for (const design of backup.designs) {
@@ -136,7 +193,7 @@ export async function importBackup(file: File): Promise<void> {
     } as Design);
   }
 
-  // Auto-designs — only present in version 2 backups
+  // Auto-designs — present in version 2+ backups
   for (const ad of backup.autoDesigns ?? []) {
     const { id: _id, eventYearId, thumbnailBlob, ...rest } = ad;
     await db.autoDesigns.add({

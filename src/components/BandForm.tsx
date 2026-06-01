@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { db } from '../db';
 import type { Band } from '../types';
+import type { BandScheduleSummary } from './BandManager';
 import {
   COMPOSITE_W, COMPOSITE_H,
   logoPosition, svgBlobToWhiteImage, generateCompositeBlob,
@@ -11,6 +12,7 @@ interface Props {
   yearId: number;
   band: Band | null;
   existingCount: number;
+  scheduleSummaries: BandScheduleSummary[];
   onClose: () => void;
 }
 
@@ -32,9 +34,10 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: nu
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-export default function BandForm({ yearId, band, existingCount, onClose }: Props) {
+export default function BandForm({ yearId, band, existingCount, scheduleSummaries, onClose }: Props) {
   const [name, setName] = useState('');
   const [isHeadliner, setIsHeadliner] = useState(false);
+  const [includeInDesigns, setIncludeInDesigns] = useState(true);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -53,6 +56,7 @@ export default function BandForm({ yearId, band, existingCount, onClose }: Props
     if (band) {
       setName(band.name);
       setIsHeadliner(band.isHeadliner);
+      setIncludeInDesigns(band.includeInDesigns !== false);
       setLogoScale(band.logoScale ?? 1.0);
       setLogoOffsetX(band.logoOffsetX ?? 0);
       setLogoOffsetY(band.logoOffsetY ?? 0);
@@ -175,7 +179,7 @@ export default function BandForm({ yearId, band, existingCount, onClose }: Props
 
       if (band) {
         await db.bands.update(band.id!, {
-          name: name.trim(), isHeadliner,
+          name: name.trim(), isHeadliner, includeInDesigns,
           logoBlob, photoBlob, compositeBlob,
           logoScale, logoOffsetX, logoOffsetY,
         });
@@ -185,6 +189,7 @@ export default function BandForm({ yearId, band, existingCount, onClose }: Props
           name: name.trim(),
           logoBlob, photoBlob, compositeBlob,
           isHeadliner,
+          includeInDesigns,
           order: existingCount,
           logoScale, logoOffsetX, logoOffsetY,
           createdAt: Date.now(),
@@ -226,6 +231,43 @@ export default function BandForm({ yearId, band, existingCount, onClose }: Props
               Headliner (always on its own row)
             </label>
           </div>
+
+          <div className="field checkbox-field">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={includeInDesigns}
+                onChange={e => setIncludeInDesigns(e.target.checked)}
+              />
+              Include in public designs
+            </label>
+          </div>
+
+          {band && (
+            <div className="band-schedule-summary">
+              <h3>Schedule</h3>
+              {scheduleSummaries.length === 0 ? (
+                <p>No assigned slots yet.</p>
+              ) : (
+                <div className="band-schedule-list">
+                  {scheduleSummaries.map(summary => (
+                    <div className="band-schedule-item" key={summary.slot.id}>
+                      <span>
+                        {summary.eventDay
+                          ? `${summary.eventDay.titleFi} ${summary.eventDay.displayDate}`
+                          : 'Unknown day'}
+                      </span>
+                      <strong>{summary.stage?.name ?? 'Unknown stage'}</strong>
+                      <em>
+                        {summary.slot.displayTime}
+                        {summary.slot.visibility === 'hidden' ? ' / hidden' : ''}
+                      </em>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="band-form-files">
             <div className="field">

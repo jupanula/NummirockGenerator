@@ -8,6 +8,50 @@ export interface EventYear {
   createdAt: number;
 }
 
+export interface EventDay {
+  id?: number;
+  eventYearId: number;
+  date: string;        // YYYY-MM-DD anchor date for the festival day
+  titleFi: string;     // e.g. LAUANTAI
+  titleEn: string;     // e.g. SATURDAY
+  displayDate: string; // e.g. 20.6.
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Stage {
+  id?: number;
+  eventYearId: number;
+  name: string;
+  logoBlob?: Blob;
+  logoMimeType?: string;
+  order: number;       // largest/main stage first; also timetable column order
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type SlotVisibility = 'public' | 'hidden';
+
+export interface PerformanceSlot {
+  id?: number;
+  eventYearId: number;
+  eventDayId: number;
+  stageId: number;
+  bandId?: number;
+  displayTime: string;      // e.g. 23:45, 24:00, 00:15
+  sortMinutes: number;      // linear festival-day ordering, supports after-midnight slots
+  endDisplayTime?: string;
+  endSortMinutes?: number;
+  isAfterMidnight?: boolean;
+  isEndAfterMidnight?: boolean;
+  isTba?: boolean;
+  tbaText?: string;
+  visibility: SlotVisibility;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Band {
   id?: number;
   eventYearId: number;
@@ -20,6 +64,7 @@ export interface Band {
   logoScale: number;
   logoOffsetX: number;
   logoOffsetY: number;
+  includeInDesigns?: boolean;
   createdAt: number;
 }
 
@@ -89,15 +134,15 @@ export interface AutoDesign {
   nameNorm: number;         // 0–100; 0 = proportional width, 100 = all names equal width
   nameFirstRow: number;     // target bands per row (0 = auto)
   nameFontScale: number;    // 50–200; multiplier on auto-computed font size (100 = auto)
+  includeHiddenBands?: boolean; // include bands marked hidden from public designs
   thumbnailBlob?: Blob;
   createdAt: number;
   updatedAt: number;
 }
 
-export type Tab = 'bands' | 'designs' | 'auto-designs' | 'settings';
+export type Tab = 'bands' | 'designs' | 'scheduler' | 'settings';
 
 export type NavState =
   | { view: 'home' }
   | { view: 'workspace'; yearId: number; tab: Tab }
-  | { view: 'design-editor'; yearId: number; designId?: number }
   | { view: 'auto-design-editor'; yearId: number; designId?: number };

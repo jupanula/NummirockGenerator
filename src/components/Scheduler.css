@@ -1,0 +1,360 @@
+.scheduler {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.scheduler-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.scheduler-toolbar h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.scheduler-toolbar p {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.scheduler-toolbar select {
+  max-width: 340px;
+}
+
+.scheduler-loading,
+.scheduler-empty {
+  padding: 48px 24px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.scheduler-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.scheduler-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.scheduler-sidebar h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.scheduler-sidebar p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.unassigned-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.unassigned-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 9px;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.unassigned-band:active {
+  cursor: grabbing;
+}
+
+.unassigned-band span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.unassigned-band em {
+  color: #d8a7c5;
+  font-style: normal;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.scheduler-board {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  min-width: 0;
+}
+
+.scheduler-error {
+  border: 1px solid #e63b3b;
+  background: rgba(230, 59, 59, 0.15);
+  color: #ff8d8d;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.calendar-wrap {
+  min-width: 760px;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: 72px repeat(var(--stage-count, 3), minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.time-axis-spacer {
+  width: 72px;
+}
+
+.calendar-stage-title {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 10px;
+  text-align: center;
+  font-family: NummirockFont, sans-serif;
+  color: #fff;
+  font-size: 24px;
+  letter-spacing: 0.03em;
+  min-width: 0;
+}
+
+.calendar-grid {
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
+  position: relative;
+}
+
+.time-axis,
+.calendar-lane {
+  position: relative;
+  min-height: 100%;
+}
+
+.time-mark {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.calendar-lane {
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px),
+    #050505;
+  background-size: 100% 60px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+.calendar-lane:hover {
+  border-color: var(--border-focus);
+}
+
+.calendar-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.calendar-slot {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  min-height: 42px;
+  background: #222;
+  border: 1px solid #303030;
+  border-radius: 5px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  cursor: default;
+  overflow: hidden;
+}
+
+.calendar-slot.hidden-slot {
+  opacity: 0.68;
+  border-style: dashed;
+}
+
+.calendar-slot:hover {
+  border-color: var(--accent);
+}
+
+.slot-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+}
+
+.slot-time-label {
+  color: #d8a7c5;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.slot-main strong {
+  font-family: NummirockFont, sans-serif;
+  font-size: 18px;
+  color: #fff;
+  text-align: center;
+  line-height: 1.05;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slot-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.calendar-slot:hover .slot-tools {
+  opacity: 1;
+}
+
+.slot-tools label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.slot-tools input {
+  width: auto;
+}
+
+.slot-tools select {
+  height: 24px;
+  padding: 2px 5px;
+  font-size: 10px;
+}
+
+.slot-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 3px;
+}
+
+.slot-link-btn:hover {
+  color: #fff;
+}
+
+.slot-link-btn.danger:hover {
+  color: #ff8d8d;
+}
+
+.slot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.slot-modal-box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.slot-modal-box h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.slot-modal-box p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.slot-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.slot-modal-field label,
+.slot-modal-check {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.slot-modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.slot-modal-check input {
+  width: auto;
+}
+
+.slot-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}

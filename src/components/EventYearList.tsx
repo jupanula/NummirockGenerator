@@ -69,8 +69,12 @@ export default function EventYearList({ onSelectYear }: Props) {
   async function handleDelete(id: number, e: React.MouseEvent) {
     e.stopPropagation();
     if (!confirm('Delete this event year and all its bands and designs?')) return;
+    await db.eventDays.where('eventYearId').equals(id).delete();
+    await db.stages.where('eventYearId').equals(id).delete();
+    await db.performanceSlots.where('eventYearId').equals(id).delete();
     await db.bands.where('eventYearId').equals(id).delete();
     await db.designs.where('eventYearId').equals(id).delete();
+    await db.autoDesigns.where('eventYearId').equals(id).delete();
     await db.eventYears.delete(id);
   }
 
