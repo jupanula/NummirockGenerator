@@ -5,6 +5,7 @@ import BandManager from './BandManager';
 import YearSettings from './YearSettings';
 import AutoDesignList from './AutoDesignList';
 import Scheduler from './Scheduler';
+import EnvironmentBadge from './EnvironmentBadge';
 import './YearWorkspace.css';
 
 interface Props {
@@ -37,6 +38,7 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
         <div className="workspace-title">
           <span className="workspace-year">{year.year}</span>
           <span className="workspace-name">{year.name}</span>
+          <EnvironmentBadge />
         </div>
         <nav className="workspace-tabs">
           {tabs.map(t => (

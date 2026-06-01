@@ -4,6 +4,7 @@ import { db } from '../db';
 import type { EventYear } from '../types';
 import { exportBackup, importBackup } from '../utils/dbBackup';
 import { setupBackupFolder, isBackupConfigured } from '../utils/autoBackup';
+import EnvironmentBadge from './EnvironmentBadge';
 import './EventYearList.css';
 
 interface Props {
@@ -86,6 +87,7 @@ export default function EventYearList({ onSelectYear }: Props) {
         </div>
         <h1>Generator</h1>
         <div className="year-list-header-right">
+          <EnvironmentBadge />
           {autoBackupReady
             ? <span className="auto-backup-status">Auto-backup on</span>
             : <button className="btn-ghost auto-backup-setup" onClick={handleSetupAutoBackup}>Set up auto-backup</button>
