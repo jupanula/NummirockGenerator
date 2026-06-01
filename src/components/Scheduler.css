@@ -279,11 +279,11 @@
   background: #222;
   border: 1px solid #303030;
   border-radius: 5px;
-  padding: 6px 8px;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: 2px;
   cursor: pointer;
   overflow: hidden;
 }
@@ -317,26 +317,39 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   min-width: 0;
+  width: 100%;
+}
+
+.slot-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  min-height: 12px;
 }
 
 .slot-badges {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-height: 13px;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .slot-status-badge {
   border-radius: 999px;
-  padding: 2px 6px;
-  font-size: 8px;
+  padding: 1px 5px;
+  font-size: 7px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .slot-status-badge.tba {
@@ -350,30 +363,29 @@
   color: #ffb2b2;
 }
 
+.slot-status-badge.kind {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
 .slot-time-label {
   color: #d8a7c5;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .slot-main strong {
   font-family: NummirockFont, sans-serif;
-  font-size: 18px;
+  font-size: 28px;
   color: #fff;
   text-align: center;
-  line-height: 1.05;
+  line-height: 0.6;
   white-space: nowrap;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.slot-kind-label {
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .slot-modal {

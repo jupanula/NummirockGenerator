@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import type { Band, PerformanceSlot, ScheduleAct, ScheduleActType, Stage } from '../types';
 import { slotsOverlap } from '../utils/scheduleTime';
+import { exportSchedulePdf } from '../utils/schedulePdfExport';
 import './Scheduler.css';
 
 interface Props {
@@ -441,6 +442,11 @@ export default function Scheduler({ yearId }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  async function handleExportPdf() {
+    if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) return;
+    await exportSchedulePdf({ year, eventDays, stages, bands, scheduleActs, slots });
+  }
+
   if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) {
     return <div className="scheduler-loading">Loading...</div>;
   }
@@ -459,6 +465,9 @@ export default function Scheduler({ yearId }: Props) {
         <div className="scheduler-toolbar-actions">
           <button className="btn-secondary" onClick={exportScheduleCsv} disabled={slots.length === 0}>
             Export CSV
+          </button>
+          <button className="btn-secondary" onClick={handleExportPdf} disabled={slots.length === 0}>
+            Export PDF
           </button>
           {eventDays.length > 0 && (
             <select
@@ -630,13 +639,15 @@ export default function Scheduler({ yearId }: Props) {
                           }}
                         >
                           <div className="slot-main">
-                            <div className="slot-badges">
-                              {isTbaSlot && <span className="slot-status-badge tba">TBA</span>}
-                              {slot.visibility === 'hidden' && <span className="slot-status-badge hidden">Hidden</span>}
+                            <div className="slot-meta-row">
+                              <span className="slot-time-label">{slot.displayTime}</span>
+                              <div className="slot-badges">
+                                {isTbaSlot && <span className="slot-status-badge tba">TBA</span>}
+                                {slot.visibility === 'hidden' && <span className="slot-status-badge hidden">Hidden</span>}
+                                {act && <span className="slot-status-badge kind">{act.type}</span>}
+                              </div>
                             </div>
-                            <span className="slot-time-label">{slot.displayTime}</span>
                             <strong>{band?.name ?? act?.name ?? (slot.isTba ? slot.tbaText || 'TBA' : 'Drop band here')}</strong>
-                            {act && <span className="slot-kind-label">{act.type}</span>}
                           </div>
                         </div>
                       );
