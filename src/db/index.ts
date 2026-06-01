@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { EventYear, EventDay, Stage, PerformanceSlot, Band, Design, AutoDesign } from '../types';
+import type { EventYear, EventDay, Stage, ScheduleAct, PerformanceSlot, Band, Design, AutoDesign } from '../types';
 
 export interface Setting {
   key: string;
@@ -10,6 +10,7 @@ const db = new Dexie('NummirockGeneratorDB') as Dexie & {
   eventYears: EntityTable<EventYear, 'id'>;
   eventDays: EntityTable<EventDay, 'id'>;
   stages: EntityTable<Stage, 'id'>;
+  scheduleActs: EntityTable<ScheduleAct, 'id'>;
   performanceSlots: EntityTable<PerformanceSlot, 'id'>;
   bands: EntityTable<Band, 'id'>;
   designs: EntityTable<Design, 'id'>;
@@ -53,6 +54,18 @@ db.version(5).stores({
   eventDays: '++id, eventYearId, order',
   stages: '++id, eventYearId, order',
   performanceSlots: '++id, eventYearId, eventDayId, stageId, bandId, sortMinutes',
+  bands: '++id, eventYearId, order',
+  designs: '++id, eventYearId',
+  autoDesigns: '++id, eventYearId',
+  settings: 'key',
+});
+
+db.version(6).stores({
+  eventYears: '++id, year',
+  eventDays: '++id, eventYearId, order',
+  stages: '++id, eventYearId, order',
+  scheduleActs: '++id, eventYearId, type',
+  performanceSlots: '++id, eventYearId, eventDayId, stageId, bandId, scheduleActId, sortMinutes',
   bands: '++id, eventYearId, order',
   designs: '++id, eventYearId',
   autoDesigns: '++id, eventYearId',

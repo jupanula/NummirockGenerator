@@ -1,5 +1,5 @@
 import { db } from '../db';
-import type { EventYear, EventDay, Stage, PerformanceSlot, Band, Design, AutoDesign } from '../types';
+import type { EventYear, EventDay, Stage, ScheduleAct, PerformanceSlot, Band, Design, AutoDesign } from '../types';
 
 // ── Blob ↔ base64 helpers ────────────────────────────────────────────────────
 
@@ -38,11 +38,12 @@ interface StageSerialized extends Omit<Stage, 'logoBlob'> {
 }
 
 interface BackupFile {
-  version:     1 | 2 | 3 | 4;
+  version:     1 | 2 | 3 | 4 | 5;
   exportedAt:  number;
   eventYears:  EventYear[];
   eventDays?:  EventDay[];
   stages?:     StageSerialized[];
+  scheduleActs?: ScheduleAct[];
   performanceSlots?: PerformanceSlot[];
   bands:       BandSerialized[];
   designs:     Design[];
@@ -52,10 +53,11 @@ interface BackupFile {
 // ── Export ───────────────────────────────────────────────────────────────────
 
 export async function createBackupJSON(): Promise<string> {
-  const [eventYears, eventDays, stages, performanceSlots, bands, designs, autoDesigns] = await Promise.all([
+  const [eventYears, eventDays, stages, scheduleActs, performanceSlots, bands, designs, autoDesigns] = await Promise.all([
     db.eventYears.toArray(),
     db.eventDays.toArray(),
     db.stages.toArray(),
+    db.scheduleActs.toArray(),
     db.performanceSlots.toArray(),
     db.bands.toArray(),
     db.designs.toArray(),
@@ -95,11 +97,12 @@ export async function createBackupJSON(): Promise<string> {
   );
 
   const backup: BackupFile = {
-    version: 4,
+    version: 5,
     exportedAt: Date.now(),
     eventYears,
     eventDays,
     stages: serialisedStages,
+    scheduleActs,
     performanceSlots,
     bands: serialisedBands,
     designs,
@@ -127,7 +130,7 @@ export async function importBackup(file: File): Promise<void> {
   const text   = await file.text();
   const backup = JSON.parse(text) as BackupFile;
 
-  if (backup.version !== 1 && backup.version !== 2 && backup.version !== 3 && backup.version !== 4) {
+  if (backup.version !== 1 && backup.version !== 2 && backup.version !== 3 && backup.version !== 4 && backup.version !== 5) {
     throw new Error('Unsupported backup version');
   }
 
@@ -135,6 +138,7 @@ export async function importBackup(file: File): Promise<void> {
   const yearIdMap: Record<number, number> = {};
   const dayIdMap: Record<number, number> = {};
   const stageIdMap: Record<number, number> = {};
+  const actIdMap: Record<number, number> = {};
   const bandIdMap: Record<number, number> = {};
 
   for (const year of backup.eventYears) {
@@ -162,6 +166,15 @@ export async function importBackup(file: File): Promise<void> {
     if (oldId != null) stageIdMap[oldId] = newId as number;
   }
 
+  for (const act of backup.scheduleActs ?? []) {
+    const { id: oldId, eventYearId, ...rest } = act;
+    const newId = await db.scheduleActs.add({
+      ...rest,
+      eventYearId: yearIdMap[eventYearId] ?? eventYearId,
+    } as ScheduleAct);
+    if (oldId != null) actIdMap[oldId] = newId as number;
+  }
+
   for (const band of backup.bands) {
     const { id: oldId, eventYearId, photoBlob, logoBlob, compositeBlob, ...rest } = band;
     const newId = await db.bands.add({
@@ -175,13 +188,14 @@ export async function importBackup(file: File): Promise<void> {
   }
 
   for (const slot of backup.performanceSlots ?? []) {
-    const { id: _id, eventYearId, eventDayId, stageId, bandId, ...rest } = slot;
+    const { id: _id, eventYearId, eventDayId, stageId, bandId, scheduleActId, ...rest } = slot;
     await db.performanceSlots.add({
       ...rest,
       eventYearId: yearIdMap[eventYearId] ?? eventYearId,
       eventDayId: dayIdMap[eventDayId] ?? eventDayId,
       stageId: stageIdMap[stageId] ?? stageId,
       bandId: bandId != null ? (bandIdMap[bandId] ?? bandId) : undefined,
+      scheduleActId: scheduleActId != null ? (actIdMap[scheduleActId] ?? scheduleActId) : undefined,
     } as PerformanceSlot);
   }
 

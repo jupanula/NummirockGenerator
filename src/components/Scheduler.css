@@ -29,6 +29,13 @@
   max-width: 340px;
 }
 
+.scheduler-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .scheduler-loading,
 .scheduler-empty {
   padding: 48px 24px;
@@ -106,6 +113,47 @@
   flex-shrink: 0;
 }
 
+.schedule-act-section {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.schedule-act-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.schedule-act-form input,
+.schedule-act-form select {
+  height: 34px;
+  font-size: 12px;
+}
+
+.schedule-act-card {
+  position: relative;
+  padding-right: 64px;
+}
+
+.schedule-act-delete {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 0;
+}
+
+.schedule-act-delete:hover {
+  color: #ff8d8d;
+}
+
 .scheduler-board {
   flex: 1;
   overflow: auto;
@@ -132,6 +180,11 @@
   grid-template-columns: 72px repeat(var(--stage-count, 3), minmax(260px, 1fr));
   gap: 10px;
   margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-primary);
+  padding-bottom: 10px;
 }
 
 .time-axis-spacer {
@@ -142,13 +195,35 @@
   background: #000;
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 14px 10px;
+  padding: 14px 12px;
   text-align: center;
   font-family: NummirockFont, sans-serif;
   color: #fff;
   font-size: 24px;
   letter-spacing: 0.03em;
   min-width: 0;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendar-stage-title.has-logo {
+  padding: 10px 14px;
+}
+
+.calendar-stage-title img {
+  display: block;
+  width: auto;
+  max-width: 50%;
+  max-height: 74px;
+  object-fit: contain;
+}
+
+.calendar-stage-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-grid {
@@ -209,17 +284,33 @@
   flex-direction: column;
   justify-content: center;
   gap: 5px;
-  cursor: default;
+  cursor: pointer;
   overflow: hidden;
 }
 
 .calendar-slot.hidden-slot {
-  opacity: 0.68;
+  opacity: 0.78;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 7px,
+      transparent 7px,
+      transparent 14px
+    ),
+    #171717;
+  border-color: #6c3b3b;
   border-style: dashed;
+}
+
+.calendar-slot.tba-slot {
+  background: #2a1e27;
+  border-color: rgba(230, 0, 126, 0.65);
 }
 
 .calendar-slot:hover {
   border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(230, 0, 126, 0.35);
 }
 
 .slot-main {
@@ -228,6 +319,35 @@
   align-items: center;
   gap: 1px;
   min-width: 0;
+}
+
+.slot-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 13px;
+}
+
+.slot-status-badge {
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.slot-status-badge.tba {
+  background: var(--accent);
+  color: #fff;
+}
+
+.slot-status-badge.hidden {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 141, 141, 0.7);
+  color: #ffb2b2;
 }
 
 .slot-time-label {
@@ -248,52 +368,12 @@
   text-overflow: ellipsis;
 }
 
-.slot-tools {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  opacity: 0;
-  transition: opacity 0.12s;
-}
-
-.calendar-slot:hover .slot-tools {
-  opacity: 1;
-}
-
-.slot-tools label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--text-secondary);
-  font-size: 10px;
-}
-
-.slot-tools input {
-  width: auto;
-}
-
-.slot-tools select {
-  height: 24px;
-  padding: 2px 5px;
-  font-size: 10px;
-}
-
-.slot-link-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 10px;
-  padding: 2px 3px;
-}
-
-.slot-link-btn:hover {
-  color: #fff;
-}
-
-.slot-link-btn.danger:hover {
-  color: #ff8d8d;
+.slot-kind-label {
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .slot-modal {
@@ -357,4 +437,8 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 18px;
+}
+
+.slot-delete-btn {
+  margin-right: auto;
 }

@@ -31,6 +31,17 @@ export interface Stage {
   updatedAt: number;
 }
 
+export type ScheduleActType = 'performer' | 'activity' | 'host' | 'other';
+
+export interface ScheduleAct {
+  id?: number;
+  eventYearId: number;
+  name: string;
+  type: ScheduleActType;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SlotVisibility = 'public' | 'hidden';
 
 export interface PerformanceSlot {
@@ -39,6 +50,7 @@ export interface PerformanceSlot {
   eventDayId: number;
   stageId: number;
   bandId?: number;
+  scheduleActId?: number;
   displayTime: string;      // e.g. 23:45, 24:00, 00:15
   sortMinutes: number;      // linear festival-day ordering, supports after-midnight slots
   endDisplayTime?: string;

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import type { Band, PerformanceSlot, Stage } from '../types';
+import type { Band, PerformanceSlot, ScheduleAct, ScheduleActType, Stage } from '../types';
 import { slotsOverlap } from '../utils/scheduleTime';
 import './Scheduler.css';
 
@@ -10,6 +10,7 @@ interface Props {
 }
 
 interface SlotDraft {
+  slotId?: number;
   stageId: number;
   startMinutes: number;
   endMinutes: number | '';
@@ -49,7 +50,31 @@ function roundToStep(minutes: number) {
   return Math.max(DAY_START, Math.min(DAY_END, Math.round(minutes / STEP_MINUTES) * STEP_MINUTES));
 }
 
+function StageHeader({ stage }: { stage: Stage }) {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!(stage.logoBlob instanceof Blob)) {
+      setLogoUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(stage.logoBlob);
+    setLogoUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [stage.logoBlob]);
+
+  return (
+    <div className={`calendar-stage-title${logoUrl ? ' has-logo' : ''}`}>
+      {logoUrl
+        ? <img src={logoUrl} alt={stage.name} />
+        : <span>{stage.name}</span>
+      }
+    </div>
+  );
+}
+
 export default function Scheduler({ yearId }: Props) {
+  const year = useLiveQuery(() => db.eventYears.get(yearId), [yearId]);
   const eventDays = useLiveQuery(
     () => db.eventDays.where('eventYearId').equals(yearId).sortBy('order'),
     [yearId]
@@ -62,6 +87,10 @@ export default function Scheduler({ yearId }: Props) {
     () => db.bands.where('eventYearId').equals(yearId).sortBy('order'),
     [yearId]
   );
+  const scheduleActs = useLiveQuery(
+    () => db.scheduleActs.where('eventYearId').equals(yearId).sortBy('name'),
+    [yearId]
+  );
   const slots = useLiveQuery(
     () => db.performanceSlots.where('eventYearId').equals(yearId).sortBy('sortMinutes'),
     [yearId]
@@ -70,6 +99,8 @@ export default function Scheduler({ yearId }: Props) {
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [draft, setDraft] = useState<SlotDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newActName, setNewActName] = useState('');
+  const [newActType, setNewActType] = useState<ScheduleActType>('activity');
 
   const activeDay = useMemo(() => {
     if (!eventDays?.length) return undefined;
@@ -88,6 +119,22 @@ export default function Scheduler({ yearId }: Props) {
     const ids = new Set<number>();
     for (const slot of slots ?? []) {
       if (slot.bandId != null) ids.add(slot.bandId);
+    }
+    return ids;
+  }, [slots]);
+
+  const actById = useMemo(() => {
+    const map = new Map<number, ScheduleAct>();
+    for (const act of scheduleActs ?? []) {
+      if (act.id != null) map.set(act.id, act);
+    }
+    return map;
+  }, [scheduleActs]);
+
+  const assignedActIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const slot of slots ?? []) {
+      if (slot.scheduleActId != null) ids.add(slot.scheduleActId);
     }
     return ids;
   }, [slots]);
@@ -125,7 +172,21 @@ export default function Scheduler({ yearId }: Props) {
     });
   }
 
-  async function createSlot() {
+  function openExistingSlot(slot: PerformanceSlot, event: React.MouseEvent) {
+    event.stopPropagation();
+    setError(null);
+    setDraft({
+      slotId: slot.id,
+      stageId: slot.stageId,
+      startMinutes: slot.sortMinutes,
+      endMinutes: slot.endSortMinutes ?? '',
+      isTba: slot.isTba ?? false,
+      tbaText: slot.tbaText ?? 'TBA',
+      visibility: slot.visibility,
+    });
+  }
+
+  async function saveSlot() {
     if (!activeDay || !draft) return;
     setError(null);
 
@@ -137,6 +198,7 @@ export default function Scheduler({ yearId }: Props) {
 
     const stageSlots = daySlots.filter(slot => slot.stageId === draft.stageId);
     const overlaps = stageSlots.some(slot =>
+      slot.id !== draft.slotId &&
       slotsOverlap(draft.startMinutes, endMinutes, slot.sortMinutes, slot.endSortMinutes)
     );
     if (overlaps) {
@@ -145,10 +207,7 @@ export default function Scheduler({ yearId }: Props) {
     }
 
     const now = Date.now();
-    const slot: PerformanceSlot = {
-      eventYearId: yearId,
-      eventDayId: activeDay.id!,
-      stageId: draft.stageId,
+    const patch = {
       displayTime: formatSlotTime(draft.startMinutes),
       sortMinutes: draft.startMinutes,
       endDisplayTime: endMinutes != null ? formatSlotTime(endMinutes) : undefined,
@@ -158,35 +217,237 @@ export default function Scheduler({ yearId }: Props) {
       isTba: draft.isTba,
       tbaText: draft.tbaText.trim() || 'TBA',
       visibility: draft.visibility,
-      createdAt: now,
       updatedAt: now,
     };
 
-    await db.performanceSlots.add(slot);
+    if (draft.slotId) {
+      await db.performanceSlots.update(draft.slotId, {
+        ...patch,
+        ...(draft.isTba ? { bandId: undefined, scheduleActId: undefined } : {}),
+      });
+    } else {
+      const slot: PerformanceSlot = {
+        eventYearId: yearId,
+        eventDayId: activeDay.id!,
+        stageId: draft.stageId,
+        ...patch,
+        createdAt: now,
+      };
+      await db.performanceSlots.add(slot);
+    }
     setDraft(null);
   }
+
+  useEffect(() => {
+    if (!draft) return;
+
+    function handleModalKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setDraft(null);
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void saveSlot();
+      }
+    }
+
+    window.addEventListener('keydown', handleModalKey);
+    return () => window.removeEventListener('keydown', handleModalKey);
+  }, [draft]);
 
   async function updateSlot(slot: PerformanceSlot, patch: Partial<PerformanceSlot>) {
     await db.performanceSlots.update(slot.id!, { ...patch, updatedAt: Date.now() });
   }
 
-  async function deleteSlot(slot: PerformanceSlot) {
-    if (!confirm(`Delete slot ${slot.displayTime}?`)) return;
-    await db.performanceSlots.delete(slot.id!);
+  async function deleteDraftSlot() {
+    if (!draft?.slotId) return;
+    if (!confirm('Delete this slot?')) return;
+    await db.performanceSlots.delete(draft.slotId);
+    setDraft(null);
+  }
+
+  async function clearDraftSlot() {
+    if (!draft?.slotId) return;
+    await db.performanceSlots.update(draft.slotId, {
+      bandId: undefined,
+      scheduleActId: undefined,
+      isTba: true,
+      tbaText: draft.tbaText.trim() || 'TBA',
+      updatedAt: Date.now(),
+    });
+    setDraft({
+      ...draft,
+      isTba: true,
+      tbaText: draft.tbaText.trim() || 'TBA',
+    });
   }
 
   async function assignDroppedBand(slot: PerformanceSlot, event: React.DragEvent) {
     event.preventDefault();
-    const bandId = Number(event.dataTransfer.getData('text/plain'));
-    if (!bandId) return;
-    await updateSlot(slot, { bandId, isTba: false });
+    const payload = event.dataTransfer.getData('application/x-nummirock-schedule-item')
+      || event.dataTransfer.getData('text/plain');
+    const [kind, rawId] = payload.includes(':') ? payload.split(':') : ['band', payload];
+    const id = Number(rawId);
+    if (!id) return;
+
+    if (kind === 'act') {
+      await updateSlot(slot, { scheduleActId: id, bandId: undefined, isTba: false });
+      return;
+    }
+
+    await updateSlot(slot, { bandId: id, scheduleActId: undefined, isTba: false });
   }
 
-  if (!eventDays || !stages || !bands || !slots) {
+  async function createScheduleAct(event: React.FormEvent) {
+    event.preventDefault();
+    const name = newActName.trim();
+    if (!name) return;
+    const now = Date.now();
+    await db.scheduleActs.add({
+      eventYearId: yearId,
+      name,
+      type: newActType,
+      createdAt: now,
+      updatedAt: now,
+    });
+    setNewActName('');
+  }
+
+  async function deleteScheduleAct(act: ScheduleAct) {
+    if (!act.id) return;
+    const assignedSlots = (slots ?? []).filter(slot => slot.scheduleActId === act.id);
+    const detail = assignedSlots.length > 0
+      ? ` This will clear ${assignedSlots.length} assigned slot${assignedSlots.length === 1 ? '' : 's'}.`
+      : '';
+    if (!confirm(`Delete schedule act "${act.name}"?${detail}`)) return;
+
+    await db.transaction('rw', db.scheduleActs, db.performanceSlots, async () => {
+      const now = Date.now();
+      for (const slot of assignedSlots) {
+        await db.performanceSlots.update(slot.id!, {
+          scheduleActId: undefined,
+          isTba: true,
+          tbaText: slot.tbaText || 'TBA',
+          updatedAt: now,
+        });
+      }
+      await db.scheduleActs.delete(act.id!);
+    });
+    setError(null);
+  }
+
+  function csvValue(value: unknown) {
+    if (value == null) return '';
+    const text = String(value);
+    if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  }
+
+  function exportScheduleCsv() {
+    if (!eventDays || !stages || !bands || !scheduleActs || !slots) return;
+
+    const daysById = new Map(eventDays.map(day => [day.id!, day]));
+    const stagesById = new Map(stages.map(stage => [stage.id!, stage]));
+    const bandsById = new Map(bands.map(band => [band.id!, band]));
+    const actsById = new Map(scheduleActs.map(act => [act.id!, act]));
+
+    const headers = [
+      'eventYear',
+      'eventName',
+      'eventDayOrder',
+      'eventDate',
+      'eventDayFi',
+      'eventDayEn',
+      'eventDisplayDate',
+      'stageOrder',
+      'stageName',
+      'startTime',
+      'endTime',
+      'sortMinutes',
+      'endSortMinutes',
+      'afterMidnight',
+      'endAfterMidnight',
+      'visibility',
+      'isTba',
+      'tbaText',
+      'bandOrder',
+      'bandName',
+      'bandIncludedInDesigns',
+      'scheduleActName',
+      'scheduleActType',
+      'slotId',
+      'bandId',
+      'scheduleActId',
+      'stageId',
+      'eventDayId',
+    ];
+
+    const rows = [...slots]
+      .sort((a, b) => {
+        const dayA = daysById.get(a.eventDayId)?.order ?? 0;
+        const dayB = daysById.get(b.eventDayId)?.order ?? 0;
+        const stageA = stagesById.get(a.stageId)?.order ?? 0;
+        const stageB = stagesById.get(b.stageId)?.order ?? 0;
+        return dayA - dayB || stageA - stageB || a.sortMinutes - b.sortMinutes;
+      })
+      .map(slot => {
+        const day = daysById.get(slot.eventDayId);
+        const stage = stagesById.get(slot.stageId);
+        const band = slot.bandId != null ? bandsById.get(slot.bandId) : undefined;
+        const act = slot.scheduleActId != null ? actsById.get(slot.scheduleActId) : undefined;
+        return [
+          year?.year ?? '',
+          year?.name ?? '',
+          day?.order ?? '',
+          day?.date ?? '',
+          day?.titleFi ?? '',
+          day?.titleEn ?? '',
+          day?.displayDate ?? '',
+          stage?.order ?? '',
+          stage?.name ?? '',
+          slot.displayTime,
+          slot.endDisplayTime ?? '',
+          slot.sortMinutes,
+          slot.endSortMinutes ?? '',
+          slot.isAfterMidnight ? 'true' : 'false',
+          slot.isEndAfterMidnight ? 'true' : 'false',
+          slot.visibility,
+          slot.isTba ? 'true' : 'false',
+          slot.tbaText ?? '',
+          band?.order ?? '',
+          band?.name ?? '',
+          band ? (band.includeInDesigns === false ? 'false' : 'true') : '',
+          act?.name ?? '',
+          act?.type ?? '',
+          slot.id ?? '',
+          slot.bandId ?? '',
+          slot.scheduleActId ?? '',
+          slot.stageId,
+          slot.eventDayId,
+        ];
+      });
+
+    const csv = [headers, ...rows]
+      .map(row => row.map(csvValue).join(','))
+      .join('\n');
+    const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const yearPart = year?.year ?? 'schedule';
+    link.href = url;
+    link.download = `nummirock-schedule-${yearPart}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) {
     return <div className="scheduler-loading">Loading...</div>;
   }
 
   const missingSetup = eventDays.length === 0 || stages.length === 0;
+  const draftSlot = draft?.slotId ? slots.find(slot => slot.id === draft.slotId) : undefined;
+  const draftHasAssignment = !!(draftSlot?.bandId || draftSlot?.scheduleActId);
 
   return (
     <div className="scheduler">
@@ -195,18 +456,23 @@ export default function Scheduler({ yearId }: Props) {
           <h2>Scheduler</h2>
           <p>Tap the day grid to create slots. Drag bands from the left list onto created slots.</p>
         </div>
-        {eventDays.length > 0 && (
-          <select
-            value={activeDay?.id ?? ''}
-            onChange={e => setSelectedDayId(Number(e.target.value))}
-          >
-            {eventDays.map(day => (
-              <option key={day.id} value={day.id}>
-                {day.titleFi} {day.displayDate} / {day.titleEn}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="scheduler-toolbar-actions">
+          <button className="btn-secondary" onClick={exportScheduleCsv} disabled={slots.length === 0}>
+            Export CSV
+          </button>
+          {eventDays.length > 0 && (
+            <select
+              value={activeDay?.id ?? ''}
+              onChange={e => setSelectedDayId(Number(e.target.value))}
+            >
+              {eventDays.map(day => (
+                <option key={day.id} value={day.id}>
+                  {day.titleFi} {day.displayDate} / {day.titleEn}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       {missingSetup ? (
@@ -226,13 +492,68 @@ export default function Scheduler({ yearId }: Props) {
                     key={band.id}
                     className="unassigned-band"
                     draggable
-                    onDragStart={event => event.dataTransfer.setData('text/plain', String(band.id))}
+                    onDragStart={event => {
+                      event.dataTransfer.setData('application/x-nummirock-schedule-item', `band:${band.id}`);
+                      event.dataTransfer.setData('text/plain', `band:${band.id}`);
+                    }}
                   >
                     <span>{band.name}</span>
                     <em>{assigned ? 'Assigned' : 'No slot'}</em>
                   </div>
                 );
               })}
+            </div>
+
+            <div className="schedule-act-section">
+              <h3>Other Acts</h3>
+              <p>Schedule-only acts and events. These do not appear in lineup designs.</p>
+              <form className="schedule-act-form" onSubmit={createScheduleAct}>
+                <input
+                  value={newActName}
+                  onChange={event => setNewActName(event.target.value)}
+                  placeholder="Act or event name"
+                />
+                <select
+                  value={newActType}
+                  onChange={event => setNewActType(event.target.value as ScheduleActType)}
+                >
+                  <option value="activity">Activity</option>
+                  <option value="performer">Performer</option>
+                  <option value="host">Host</option>
+                  <option value="other">Other</option>
+                </select>
+                <button className="btn-secondary" type="submit" disabled={!newActName.trim()}>Add</button>
+              </form>
+              <div className="unassigned-list">
+                {scheduleActs.map(act => {
+                  const assigned = act.id != null && assignedActIds.has(act.id);
+                  return (
+                    <div
+                      key={act.id}
+                      className="unassigned-band schedule-act-card"
+                      draggable
+                      onDragStart={event => {
+                        event.dataTransfer.setData('application/x-nummirock-schedule-item', `act:${act.id}`);
+                        event.dataTransfer.setData('text/plain', `act:${act.id}`);
+                      }}
+                    >
+                      <span>{act.name}</span>
+                      <em>{assigned ? 'Assigned' : act.type}</em>
+                      <button
+                        type="button"
+                        className="schedule-act-delete"
+                        aria-label={`Delete ${act.name}`}
+                        onClick={event => {
+                          event.stopPropagation();
+                          void deleteScheduleAct(act);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </aside>
 
@@ -246,9 +567,7 @@ export default function Scheduler({ yearId }: Props) {
               >
                 <div className="time-axis-spacer" />
                 {stages.map(stage => (
-                  <div className="calendar-stage-title" key={stage.id}>
-                    {stage.name}
-                  </div>
+                  <StageHeader key={stage.id} stage={stage} />
                 ))}
               </div>
 
@@ -287,6 +606,8 @@ export default function Scheduler({ yearId }: Props) {
 
                     {slotsFor(stage).map(slot => {
                       const band = slot.bandId != null ? bandById.get(slot.bandId) : undefined;
+                      const act = slot.scheduleActId != null ? actById.get(slot.scheduleActId) : undefined;
+                      const isTbaSlot = !band && !act && (slot.isTba ?? false);
                       const top = (slot.sortMinutes - DAY_START) * PX_PER_MINUTE;
                       const h = Math.max(
                         MIN_SLOT_HEIGHT,
@@ -295,35 +616,27 @@ export default function Scheduler({ yearId }: Props) {
                       return (
                         <div
                           key={slot.id}
-                          className={`calendar-slot${slot.visibility === 'hidden' ? ' hidden-slot' : ''}`}
+                          className={[
+                            'calendar-slot',
+                            slot.visibility === 'hidden' ? 'hidden-slot' : '',
+                            isTbaSlot ? 'tba-slot' : '',
+                          ].filter(Boolean).join(' ')}
                           style={{ top, height: h }}
+                          onClick={event => openExistingSlot(slot, event)}
                           onDragOver={event => event.preventDefault()}
-                          onDrop={event => assignDroppedBand(slot, event)}
+                          onDrop={event => {
+                            event.stopPropagation();
+                            void assignDroppedBand(slot, event);
+                          }}
                         >
                           <div className="slot-main">
+                            <div className="slot-badges">
+                              {isTbaSlot && <span className="slot-status-badge tba">TBA</span>}
+                              {slot.visibility === 'hidden' && <span className="slot-status-badge hidden">Hidden</span>}
+                            </div>
                             <span className="slot-time-label">{slot.displayTime}</span>
-                            <strong>{band?.name ?? (slot.isTba ? slot.tbaText || 'TBA' : 'Drop band here')}</strong>
-                          </div>
-                          <div className="slot-tools">
-                            <label>
-                              <input
-                                type="checkbox"
-                                checked={slot.isTba ?? false}
-                                onChange={e => updateSlot(slot, { isTba: e.target.checked, bandId: e.target.checked ? undefined : slot.bandId })}
-                              />
-                              TBA
-                            </label>
-                            <select
-                              value={slot.visibility}
-                              onChange={e => updateSlot(slot, { visibility: e.target.value as PerformanceSlot['visibility'] })}
-                            >
-                              <option value="public">Public</option>
-                              <option value="hidden">Hidden</option>
-                            </select>
-                            {slot.bandId != null && (
-                              <button className="slot-link-btn" onClick={() => updateSlot(slot, { bandId: undefined })}>Remove band</button>
-                            )}
-                            <button className="slot-link-btn danger" onClick={() => deleteSlot(slot)}>Delete</button>
+                            <strong>{band?.name ?? act?.name ?? (slot.isTba ? slot.tbaText || 'TBA' : 'Drop band here')}</strong>
+                            {act && <span className="slot-kind-label">{act.type}</span>}
                           </div>
                         </div>
                       );
@@ -339,8 +652,12 @@ export default function Scheduler({ yearId }: Props) {
       {draft && (
         <div className="slot-modal">
           <div className="slot-modal-box">
-            <h3>Create Slot</h3>
-            <p>Bands are assigned afterwards by dragging them onto the slot.</p>
+            <h3>{draft.slotId ? 'Edit Slot' : 'Create Slot'}</h3>
+            <p>
+              {draft.slotId
+                ? 'Edit timing and visibility. Bands are assigned by dragging them onto the slot.'
+                : 'Bands are assigned afterwards by dragging them onto the slot.'}
+            </p>
 
             <div className="slot-modal-field">
               <label>Start time</label>
@@ -410,8 +727,14 @@ export default function Scheduler({ yearId }: Props) {
             </div>
 
             <div className="slot-modal-actions">
+              {draft.slotId && (
+                <button className="btn-danger slot-delete-btn" onClick={deleteDraftSlot}>Delete</button>
+              )}
+              {draftHasAssignment && (
+                <button className="btn-secondary" onClick={clearDraftSlot}>Clear slot</button>
+              )}
               <button className="btn-ghost" onClick={() => setDraft(null)}>Cancel</button>
-              <button className="btn-primary" onClick={createSlot}>Create slot</button>
+              <button className="btn-primary" onClick={saveSlot}>{draft.slotId ? 'Save slot' : 'Create slot'}</button>
             </div>
           </div>
         </div>
