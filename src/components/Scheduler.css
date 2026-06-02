@@ -36,6 +36,28 @@
   flex-shrink: 0;
 }
 
+.export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 104px;
+}
+
+.button-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #fff;
+  border-radius: 999px;
+  animation: button-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes button-spin {
+  to { transform: rotate(360deg); }
+}
+
 .scheduler-loading,
 .scheduler-empty {
   padding: 48px 24px;

@@ -4,6 +4,7 @@ import { db } from '../db';
 import type { Band, PerformanceSlot, ScheduleAct, ScheduleActType, Stage } from '../types';
 import { slotsOverlap } from '../utils/scheduleTime';
 import { exportSchedulePdf } from '../utils/schedulePdfExport';
+import { exportScheduleXlsx } from '../utils/scheduleXlsxExport';
 import './Scheduler.css';
 
 interface Props {
@@ -19,6 +20,8 @@ interface SlotDraft {
   tbaText: string;
   visibility: 'public' | 'hidden';
 }
+
+type ExportKind = 'csv' | 'pdf' | 'xlsx';
 
 const DAY_START = 11 * 60;
 const DAY_END = 28 * 60;
@@ -102,6 +105,7 @@ export default function Scheduler({ yearId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [newActName, setNewActName] = useState('');
   const [newActType, setNewActType] = useState<ScheduleActType>('activity');
+  const [exporting, setExporting] = useState<ExportKind | null>(null);
 
   const activeDay = useMemo(() => {
     if (!eventDays?.length) return undefined;
@@ -345,7 +349,7 @@ export default function Scheduler({ yearId }: Props) {
     return text;
   }
 
-  function exportScheduleCsv() {
+  async function exportScheduleCsv() {
     if (!eventDays || !stages || !bands || !scheduleActs || !slots) return;
 
     const daysById = new Map(eventDays.map(day => [day.id!, day]));
@@ -442,9 +446,41 @@ export default function Scheduler({ yearId }: Props) {
     URL.revokeObjectURL(url);
   }
 
+  function nextFrame() {
+    return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  async function runExport(kind: ExportKind, task: () => Promise<void>) {
+    if (exporting) return;
+    setExporting(kind);
+    setError(null);
+    try {
+      await nextFrame();
+      await task();
+    } catch (err) {
+      console.error(err);
+      setError(`Export ${kind.toUpperCase()} failed.`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleExportCsv() {
+    await runExport('csv', exportScheduleCsv);
+  }
+
   async function handleExportPdf() {
-    if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) return;
-    await exportSchedulePdf({ year, eventDays, stages, bands, scheduleActs, slots });
+    await runExport('pdf', async () => {
+      if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) return;
+      await exportSchedulePdf({ year, eventDays, stages, bands, scheduleActs, slots });
+    });
+  }
+
+  async function handleExportXlsx() {
+    await runExport('xlsx', async () => {
+      if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) return;
+      await exportScheduleXlsx({ year, eventDays, stages, bands, scheduleActs, slots });
+    });
   }
 
   if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) {
@@ -463,11 +499,17 @@ export default function Scheduler({ yearId }: Props) {
           <p>Tap the day grid to create slots. Drag bands from the left list onto created slots.</p>
         </div>
         <div className="scheduler-toolbar-actions">
-          <button className="btn-secondary" onClick={exportScheduleCsv} disabled={slots.length === 0}>
-            Export CSV
+          <button className="btn-secondary export-button" onClick={handleExportCsv} disabled={slots.length === 0 || exporting !== null}>
+            {exporting === 'csv' && <span className="button-spinner" aria-hidden="true" />}
+            <span>Export CSV</span>
           </button>
-          <button className="btn-secondary" onClick={handleExportPdf} disabled={slots.length === 0}>
-            Export PDF
+          <button className="btn-secondary export-button" onClick={handleExportPdf} disabled={slots.length === 0 || exporting !== null}>
+            {exporting === 'pdf' && <span className="button-spinner" aria-hidden="true" />}
+            <span>Export PDF</span>
+          </button>
+          <button className="btn-secondary export-button" onClick={handleExportXlsx} disabled={slots.length === 0 || exporting !== null}>
+            {exporting === 'xlsx' && <span className="button-spinner" aria-hidden="true" />}
+            <span>Export XLSX</span>
           </button>
           {eventDays.length > 0 && (
             <select
