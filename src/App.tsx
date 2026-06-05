@@ -102,6 +102,7 @@ export default function App() {
         <YearWorkspace
           yearId={nav.yearId}
           tab={nav.tab}
+          schedulerDayId={nav.schedulerDayId}
           onNavigate={setNav}
         />
       )}

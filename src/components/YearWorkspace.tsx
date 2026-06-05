@@ -11,10 +11,11 @@ import './YearWorkspace.css';
 interface Props {
   yearId: number;
   tab: Tab;
+  schedulerDayId?: number;
   onNavigate: (nav: NavState) => void;
 }
 
-export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
+export default function YearWorkspace({ yearId, tab, schedulerDayId, onNavigate }: Props) {
   const year = useLiveQuery(() => db.eventYears.get(yearId), [yearId]);
 
   if (!year) return <div className="workspace-loading">Loading…</div>;
@@ -54,7 +55,12 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
       </header>
 
       <main className="workspace-content">
-        {tab === 'bands' && <BandManager yearId={yearId} />}
+        {tab === 'bands' && (
+          <BandManager
+            yearId={yearId}
+            onOpenScheduleDay={(dayId) => onNavigate({ view: 'workspace', yearId, tab: 'scheduler', schedulerDayId: dayId })}
+          />
+        )}
         {tab === 'designs' && (
           <AutoDesignList
             yearId={yearId}
@@ -63,7 +69,7 @@ export default function YearWorkspace({ yearId, tab, onNavigate }: Props) {
             }
           />
         )}
-        {tab === 'scheduler' && <Scheduler yearId={yearId} />}
+        {tab === 'scheduler' && <Scheduler yearId={yearId} initialDayId={schedulerDayId} />}
         {tab === 'settings' && <YearSettings yearId={yearId} />}
       </main>
     </div>

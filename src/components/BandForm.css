@@ -144,11 +144,25 @@
   grid-template-columns: 1fr 1fr auto;
   gap: 8px;
   align-items: center;
+  width: 100%;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 8px;
   font-size: 12px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.band-schedule-item:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.band-schedule-item:disabled {
+  cursor: default;
+  opacity: 0.7;
 }
 
 .band-schedule-item span {

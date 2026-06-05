@@ -13,6 +13,7 @@ interface Props {
   band: Band | null;
   existingCount: number;
   scheduleSummaries: BandScheduleSummary[];
+  onOpenScheduleDay: (dayId: number) => void;
   onClose: () => void;
 }
 
@@ -34,7 +35,7 @@ function drawContain(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: nu
   ctx.drawImage(img, dx, dy, dw, dh);
 }
 
-export default function BandForm({ yearId, band, existingCount, scheduleSummaries, onClose }: Props) {
+export default function BandForm({ yearId, band, existingCount, scheduleSummaries, onOpenScheduleDay, onClose }: Props) {
   const [name, setName] = useState('');
   const [isHeadliner, setIsHeadliner] = useState(false);
   const [includeInDesigns, setIncludeInDesigns] = useState(true);
@@ -251,7 +252,18 @@ export default function BandForm({ yearId, band, existingCount, scheduleSummarie
               ) : (
                 <div className="band-schedule-list">
                   {scheduleSummaries.map(summary => (
-                    <div className="band-schedule-item" key={summary.slot.id}>
+                    <button
+                      type="button"
+                      className="band-schedule-item"
+                      key={summary.slot.id}
+                      disabled={summary.eventDay?.id == null}
+                      onClick={() => {
+                        if (summary.eventDay?.id != null) {
+                          onOpenScheduleDay(summary.eventDay.id);
+                          onClose();
+                        }
+                      }}
+                    >
                       <span>
                         {summary.eventDay
                           ? `${summary.eventDay.titleFi} ${summary.eventDay.displayDate}`
@@ -262,7 +274,7 @@ export default function BandForm({ yearId, band, existingCount, scheduleSummarie
                         {summary.slot.displayTime}
                         {summary.slot.visibility === 'hidden' ? ' / hidden' : ''}
                       </em>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}

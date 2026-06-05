@@ -193,6 +193,16 @@
   margin-bottom: 12px;
 }
 
+.scheduler-note {
+  border: 1px solid rgba(230, 0, 126, 0.5);
+  background: rgba(230, 0, 126, 0.12);
+  color: #fff;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
 .calendar-wrap {
   min-width: 760px;
 }

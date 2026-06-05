@@ -157,3 +157,46 @@ export async function restoreFromBackup(fileHandle: FileSystemFileHandle): Promi
   const file = await fileHandle.getFile();
   await importBackup(file);
 }
+
+export async function writeFileToBackupFolder(filename: string, blob: Blob, subfolder?: string): Promise<boolean> {
+  const handle = await requestAndGetHandle();
+  if (!handle) return false;
+  try {
+    const target = subfolder
+      ? await handle.getDirectoryHandle(subfolder, { create: true })
+      : handle;
+    const fileHandle = await target.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getBackupSubfolder(subfolder: string): Promise<FileSystemDirectoryHandle | null> {
+  const handle = await requestAndGetHandle();
+  if (!handle) return null;
+  try {
+    return await handle.getDirectoryHandle(subfolder, { create: true });
+  } catch {
+    return null;
+  }
+}
+
+export async function writeFileToDirectory(
+  directory: FileSystemDirectoryHandle,
+  filename: string,
+  blob: Blob
+): Promise<boolean> {
+  try {
+    const fileHandle = await directory.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return true;
+  } catch {
+    return false;
+  }
+}

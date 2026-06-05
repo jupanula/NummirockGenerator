@@ -4,11 +4,13 @@ import { db } from '../db';
 import type { Band, PerformanceSlot, ScheduleAct, ScheduleActType, Stage } from '../types';
 import { slotsOverlap } from '../utils/scheduleTime';
 import { exportSchedulePdf } from '../utils/schedulePdfExport';
-import { exportScheduleXlsx } from '../utils/scheduleXlsxExport';
+import { createScheduleXlsxBlob, exportScheduleXlsx } from '../utils/scheduleXlsxExport';
+import { getBackupSubfolder, isBackupConfigured, writeFileToDirectory } from '../utils/autoBackup';
 import './Scheduler.css';
 
 interface Props {
   yearId: number;
+  initialDayId?: number;
 }
 
 interface SlotDraft {
@@ -77,7 +79,7 @@ function StageHeader({ stage }: { stage: Stage }) {
   );
 }
 
-export default function Scheduler({ yearId }: Props) {
+export default function Scheduler({ yearId, initialDayId }: Props) {
   const year = useLiveQuery(() => db.eventYears.get(yearId), [yearId]);
   const eventDays = useLiveQuery(
     () => db.eventDays.where('eventYearId').equals(yearId).sortBy('order'),
@@ -106,6 +108,11 @@ export default function Scheduler({ yearId }: Props) {
   const [newActName, setNewActName] = useState('');
   const [newActType, setNewActType] = useState<ScheduleActType>('activity');
   const [exporting, setExporting] = useState<ExportKind | null>(null);
+  const [exportNote, setExportNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialDayId != null) setSelectedDayId(initialDayId);
+  }, [initialDayId]);
 
   const activeDay = useMemo(() => {
     if (!eventDays?.length) return undefined;
@@ -454,12 +461,14 @@ export default function Scheduler({ yearId }: Props) {
     if (exporting) return;
     setExporting(kind);
     setError(null);
+    setExportNote(null);
     try {
       await nextFrame();
       await task();
     } catch (err) {
       console.error(err);
-      setError(`Export ${kind.toUpperCase()} failed.`);
+      const message = err instanceof Error ? ` ${err.message}` : '';
+      setError(`Export ${kind.toUpperCase()} failed.${message}`);
     } finally {
       setExporting(null);
     }
@@ -479,7 +488,22 @@ export default function Scheduler({ yearId }: Props) {
   async function handleExportXlsx() {
     await runExport('xlsx', async () => {
       if (!year || !eventDays || !stages || !bands || !scheduleActs || !slots) return;
-      await exportScheduleXlsx({ year, eventDays, stages, bands, scheduleActs, slots });
+      const data = { year, eventDays, stages, bands, scheduleActs, slots };
+      const configured = await isBackupConfigured();
+      const exportFolder = configured ? await getBackupSubfolder('exports') : null;
+      if (configured) {
+        if (!exportFolder) {
+          throw new Error('Could not access the selected backup folder. Allow folder permission and try again.');
+        }
+        const { blob, filename } = await createScheduleXlsxBlob(data);
+        const saved = await writeFileToDirectory(exportFolder, filename, blob);
+        if (saved) {
+          setExportNote(`Saved exports/${filename} to the selected backup folder.`);
+          return;
+        }
+        throw new Error('Could not save XLSX to the selected backup folder.');
+      }
+      await exportScheduleXlsx(data);
     });
   }
 
@@ -610,6 +634,7 @@ export default function Scheduler({ yearId }: Props) {
 
           <main className="scheduler-board">
             {error && <div className="scheduler-error">{error}</div>}
+            {exportNote && <div className="scheduler-note">{exportNote}</div>}
 
             <div className="calendar-wrap">
               <div

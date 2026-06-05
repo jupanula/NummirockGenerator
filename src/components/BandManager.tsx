@@ -18,6 +18,7 @@ import './BandManager.css';
 
 interface Props {
   yearId: number;
+  onOpenScheduleDay: (dayId: number) => void;
 }
 
 export interface BandScheduleSummary {
@@ -26,7 +27,7 @@ export interface BandScheduleSummary {
   stage?: Stage;
 }
 
-export default function BandManager({ yearId }: Props) {
+export default function BandManager({ yearId, onOpenScheduleDay }: Props) {
   const bands = useLiveQuery(
     () => db.bands.where('eventYearId').equals(yearId).sortBy('order'),
     [yearId]
@@ -141,6 +142,7 @@ export default function BandManager({ yearId }: Props) {
             band={editingBand}
             existingCount={bands?.length ?? 0}
             scheduleSummaries={editingBand?.id ? summariesByBand.get(editingBand.id) ?? [] : []}
+            onOpenScheduleDay={onOpenScheduleDay}
             onClose={() => { setShowForm(false); setEditingBand(null); }}
           />
         </div>

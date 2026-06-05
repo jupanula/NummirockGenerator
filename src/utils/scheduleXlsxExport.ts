@@ -1,11 +1,12 @@
-import type { Band, EventDay, EventYear, PerformanceSlot, Stage } from '../types';
+import type { Worksheet } from 'exceljs';
+import type { Band, EventDay, EventYear, PerformanceSlot, ScheduleAct, Stage } from '../types';
 
 interface ScheduleXlsxData {
   year: EventYear;
   eventDays: EventDay[];
   stages: Stage[];
   bands: Band[];
-  scheduleActs: unknown[];
+  scheduleActs: ScheduleAct[];
   slots: PerformanceSlot[];
 }
 
@@ -109,9 +110,108 @@ function dayLabel(day?: EventDay) {
   return `${titleCase(day.titleFi)} ${day.displayDate} ${titleCase(day.titleEn)}`;
 }
 
-export async function exportScheduleXlsx(data: ScheduleXlsxData) {
+function timeRange(slot: PerformanceSlot) {
+  return slot.endDisplayTime ? `${slot.displayTime}-${slot.endDisplayTime}` : slot.displayTime;
+}
+
+function durationMinutes(slot: PerformanceSlot) {
+  if (slot.endSortMinutes == null) return '';
+  return Math.max(0, slot.endSortMinutes - slot.sortMinutes);
+}
+
+function columnLetter(index: number) {
+  let n = index + 1;
+  let out = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    out = String.fromCharCode(65 + rem) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+function scheduleRowData({
+  year,
+  slot,
+  day,
+  stage,
+  band,
+  act,
+}: {
+  year: EventYear;
+  slot: PerformanceSlot;
+  day?: EventDay;
+  stage?: Stage;
+  band?: Band;
+  act?: ScheduleAct;
+}) {
+  const entryType = band ? 'Band' : act ? 'OtherAct' : slot.isTba ? 'TBA' : 'Empty';
+  const entryName = band?.name ?? act?.name ?? slot.tbaText ?? '';
+
+  return {
+    stageName: stage?.name ?? '',
+    startTime: slot.displayTime,
+    endTime: slot.endDisplayTime ?? '',
+    day: dayLabel(day),
+    eventYear: year.year,
+    eventYearName: year.name,
+    eventDate: day?.date ?? '',
+    dayFi: day ? titleCase(day.titleFi) : '',
+    dayEn: day ? titleCase(day.titleEn) : '',
+    displayDate: day?.displayDate ?? '',
+    stageId: stage?.id ?? '',
+    stageOrder: stage?.order ?? '',
+    slotId: slot.id ?? '',
+    timeRange: timeRange(slot),
+    sortMinutes: slot.sortMinutes,
+    endSortMinutes: slot.endSortMinutes ?? '',
+    durationMinutes: durationMinutes(slot),
+    afterMidnight: slot.isAfterMidnight ? 'Yes' : 'No',
+    endAfterMidnight: slot.isEndAfterMidnight ? 'Yes' : 'No',
+    visibility: slot.visibility,
+    isTba: slot.isTba ? 'Yes' : 'No',
+    tbaText: slot.tbaText ?? '',
+    entryType,
+    entryName,
+    entryNameUpper: entryName.toLocaleUpperCase('fi-FI'),
+    bandId: band?.id ?? '',
+    bandName: band?.name ?? '',
+    bandNameUpper: band?.name.toLocaleUpperCase('fi-FI') ?? '',
+    bandOrder: band?.order ?? '',
+    isHeadliner: band?.isHeadliner ? 'Yes' : band ? 'No' : '',
+    includeInDesigns: band ? (band.includeInDesigns === false ? 'No' : 'Yes') : '',
+    scheduleActId: act?.id ?? '',
+    scheduleActName: act?.name ?? '',
+    scheduleActType: act?.type ?? '',
+  };
+}
+
+function styleHeader(sheet: Worksheet) {
+  const header = sheet.getRow(1);
+  header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111111' } };
+  header.alignment = { vertical: 'middle' };
+  header.height = 22;
+}
+
+function styleRows(sheet: Worksheet) {
+  sheet.autoFilter = {
+    from: 'A1',
+    to: `${columnLetter(sheet.columnCount - 1)}${Math.max(1, sheet.rowCount)}`,
+  };
+  sheet.eachRow(row => {
+    row.eachCell(cell => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      };
+    });
+  });
+}
+
+export async function createScheduleXlsxBlob(data: ScheduleXlsxData): Promise<{ blob: Blob; filename: string }> {
   const ExcelJS = (await import('exceljs')).default;
-  const { year, eventDays, stages, bands, slots } = data;
+  const { year, eventDays, stages, bands, scheduleActs, slots } = data;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Nummirock Generator';
   workbook.created = new Date();
@@ -122,6 +222,7 @@ export async function exportScheduleXlsx(data: ScheduleXlsxData) {
   const daysById = new Map(eventDays.map(day => [day.id!, day]));
   const stagesById = new Map(stages.map(stage => [stage.id!, stage]));
   const bandsById = new Map(bands.map(band => [band.id!, band]));
+  const actsById = new Map(scheduleActs.map(act => [act.id!, act]));
 
   sheet.columns = [
     { header: 'StageLogo', key: 'stageLogo', width: 18 },
@@ -131,13 +232,36 @@ export async function exportScheduleXlsx(data: ScheduleXlsxData) {
     { header: 'Day', key: 'day', width: 24 },
     { header: 'BandPhoto', key: 'bandPhoto', width: 18 },
     { header: 'BandLogo', key: 'bandLogo', width: 18 },
+    { header: 'EventYear', key: 'eventYear', width: 10 },
+    { header: 'EventYearName', key: 'eventYearName', width: 24 },
+    { header: 'EventDate', key: 'eventDate', width: 14 },
+    { header: 'DayFi', key: 'dayFi', width: 14 },
+    { header: 'DayEn', key: 'dayEn', width: 14 },
+    { header: 'DisplayDate', key: 'displayDate', width: 12 },
+    { header: 'StageId', key: 'stageId', width: 10 },
+    { header: 'StageOrder', key: 'stageOrder', width: 11 },
+    { header: 'SlotId', key: 'slotId', width: 10 },
+    { header: 'TimeRange', key: 'timeRange', width: 16 },
+    { header: 'SortMinutes', key: 'sortMinutes', width: 12 },
+    { header: 'EndSortMinutes', key: 'endSortMinutes', width: 14 },
+    { header: 'DurationMinutes', key: 'durationMinutes', width: 16 },
+    { header: 'AfterMidnight', key: 'afterMidnight', width: 14 },
+    { header: 'EndAfterMidnight', key: 'endAfterMidnight', width: 18 },
+    { header: 'Visibility', key: 'visibility', width: 12 },
+    { header: 'IsTBA', key: 'isTba', width: 8 },
+    { header: 'TbaText', key: 'tbaText', width: 14 },
+    { header: 'EntryType', key: 'entryType', width: 12 },
+    { header: 'EntryName', key: 'entryName', width: 28 },
+    { header: 'EntryNameUpper', key: 'entryNameUpper', width: 28 },
+    { header: 'BandId', key: 'bandId', width: 10 },
+    { header: 'BandName', key: 'bandName', width: 28 },
+    { header: 'BandNameUpper', key: 'bandNameUpper', width: 28 },
+    { header: 'BandOrder', key: 'bandOrder', width: 11 },
+    { header: 'IsHeadliner', key: 'isHeadliner', width: 12 },
+    { header: 'IncludeInDesigns', key: 'includeInDesigns', width: 16 },
   ];
 
-  const header = sheet.getRow(1);
-  header.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  header.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111111' } };
-  header.alignment = { vertical: 'middle' };
-  header.height = 22;
+  styleHeader(sheet);
 
   const sortedSlots = [...slots]
     .filter(slot => {
@@ -162,10 +286,7 @@ export async function exportScheduleXlsx(data: ScheduleXlsxData) {
     const stage = stagesById.get(slot.stageId);
     const band = slot.bandId != null ? bandsById.get(slot.bandId) : undefined;
     const row = sheet.addRow({
-      stageName: stage?.name ?? '',
-      startTime: slot.displayTime,
-      endTime: slot.endDisplayTime ?? '',
-      day: dayLabel(day),
+      ...scheduleRowData({ year, slot, day, stage, band }),
     });
     row.height = stage?.logoBlob || band ? 82 : 28;
     row.alignment = { vertical: 'middle' };
@@ -226,22 +347,78 @@ export async function exportScheduleXlsx(data: ScheduleXlsxData) {
     }
   }
 
-  sheet.autoFilter = {
-    from: 'A1',
-    to: `G${Math.max(1, sheet.rowCount)}`,
-  };
-  sheet.eachRow(row => {
-    row.eachCell(cell => {
-      cell.border = {
-        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      };
-    });
+  styleRows(sheet);
+
+  const allSlotsSheet = workbook.addWorksheet('AllSlots', {
+    views: [{ state: 'frozen', ySplit: 1 }],
   });
+  allSlotsSheet.columns = [
+    { header: 'EventYear', key: 'eventYear', width: 10 },
+    { header: 'EventYearName', key: 'eventYearName', width: 24 },
+    { header: 'EventDate', key: 'eventDate', width: 14 },
+    { header: 'Day', key: 'day', width: 24 },
+    { header: 'DayFi', key: 'dayFi', width: 14 },
+    { header: 'DayEn', key: 'dayEn', width: 14 },
+    { header: 'DisplayDate', key: 'displayDate', width: 12 },
+    { header: 'StageId', key: 'stageId', width: 10 },
+    { header: 'StageOrder', key: 'stageOrder', width: 11 },
+    { header: 'StageName', key: 'stageName', width: 24 },
+    { header: 'SlotId', key: 'slotId', width: 10 },
+    { header: 'StartTime', key: 'startTime', width: 12 },
+    { header: 'EndTime', key: 'endTime', width: 12 },
+    { header: 'TimeRange', key: 'timeRange', width: 16 },
+    { header: 'SortMinutes', key: 'sortMinutes', width: 12 },
+    { header: 'EndSortMinutes', key: 'endSortMinutes', width: 14 },
+    { header: 'DurationMinutes', key: 'durationMinutes', width: 16 },
+    { header: 'AfterMidnight', key: 'afterMidnight', width: 14 },
+    { header: 'EndAfterMidnight', key: 'endAfterMidnight', width: 18 },
+    { header: 'Visibility', key: 'visibility', width: 12 },
+    { header: 'IsTBA', key: 'isTba', width: 8 },
+    { header: 'TbaText', key: 'tbaText', width: 14 },
+    { header: 'EntryType', key: 'entryType', width: 12 },
+    { header: 'EntryName', key: 'entryName', width: 28 },
+    { header: 'EntryNameUpper', key: 'entryNameUpper', width: 28 },
+    { header: 'BandId', key: 'bandId', width: 10 },
+    { header: 'BandName', key: 'bandName', width: 28 },
+    { header: 'BandNameUpper', key: 'bandNameUpper', width: 28 },
+    { header: 'BandOrder', key: 'bandOrder', width: 11 },
+    { header: 'IsHeadliner', key: 'isHeadliner', width: 12 },
+    { header: 'IncludeInDesigns', key: 'includeInDesigns', width: 16 },
+    { header: 'ScheduleActId', key: 'scheduleActId', width: 14 },
+    { header: 'ScheduleActName', key: 'scheduleActName', width: 24 },
+    { header: 'ScheduleActType', key: 'scheduleActType', width: 18 },
+  ];
+  styleHeader(allSlotsSheet);
+
+  [...slots]
+    .sort((a, b) => {
+      const dayA = daysById.get(a.eventDayId)?.order ?? 0;
+      const dayB = daysById.get(b.eventDayId)?.order ?? 0;
+      const stageA = stagesById.get(a.stageId)?.order ?? 0;
+      const stageB = stagesById.get(b.stageId)?.order ?? 0;
+      return dayA - dayB || a.sortMinutes - b.sortMinutes || stageA - stageB;
+    })
+    .forEach(slot => {
+      const day = daysById.get(slot.eventDayId);
+      const stage = stagesById.get(slot.stageId);
+      const band = slot.bandId != null ? bandsById.get(slot.bandId) : undefined;
+      const act = slot.scheduleActId != null ? actsById.get(slot.scheduleActId) : undefined;
+      const row = allSlotsSheet.addRow(scheduleRowData({ year, slot, day, stage, band, act }));
+      row.alignment = { vertical: 'middle' };
+    });
+  styleRows(allSlotsSheet);
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
-  downloadBlob(blob, `nummirock-schedule-${year.year}-${formatDateStamp()}.xlsx`);
+  return {
+    blob,
+    filename: `nummirock-schedule-${year.year}-${formatDateStamp()}.xlsx`,
+  };
+}
+
+export async function exportScheduleXlsx(data: ScheduleXlsxData) {
+  const { blob, filename } = await createScheduleXlsxBlob(data);
+  downloadBlob(blob, filename);
 }

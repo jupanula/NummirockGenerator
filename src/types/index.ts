@@ -156,5 +156,5 @@ export type Tab = 'bands' | 'designs' | 'scheduler' | 'settings';
 
 export type NavState =
   | { view: 'home' }
-  | { view: 'workspace'; yearId: number; tab: Tab }
+  | { view: 'workspace'; yearId: number; tab: Tab; schedulerDayId?: number }
   | { view: 'auto-design-editor'; yearId: number; designId?: number };
