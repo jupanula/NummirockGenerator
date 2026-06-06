@@ -1,0 +1,374 @@
+.cloud-schedule-state,
+.cloud-schedule-error {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cloud-schedule-error {
+  color: #ff8d8d;
+}
+
+.cloud-schedule-state.compact {
+  border-top: 0;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.cloud-schedule {
+  border-top: 1px solid var(--border);
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
+.cloud-schedule-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.cloud-schedule-stats span {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.cloud-slot-create {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 14px;
+  padding: 12px;
+}
+
+.cloud-slot-create h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+}
+
+.cloud-slot-create p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cloud-slot-create-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.cloud-slot-create-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.cloud-slot-create-grid input,
+.cloud-slot-create-grid select {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 8px;
+  font-size: 12px;
+}
+
+.cloud-slot-create-check {
+  align-self: center;
+  flex-direction: row !important;
+  align-items: center;
+  padding-bottom: 7px;
+}
+
+.cloud-slot-create-check input {
+  accent-color: var(--accent);
+}
+
+.cloud-slot-create-submit {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.cloud-schedule-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.cloud-schedule-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+}
+
+.cloud-schedule-sidebar h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.cloud-schedule-sidebar p {
+  margin: -4px 0 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cloud-schedule-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cloud-schedule-palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 7px 8px;
+  cursor: grab;
+}
+
+.cloud-schedule-palette-item:active {
+  cursor: grabbing;
+}
+
+.cloud-schedule-palette-item span {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cloud-schedule-palette-item em {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.cloud-act-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+
+.cloud-act-form input,
+.cloud-act-form select {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 8px;
+  font-size: 12px;
+}
+
+.cloud-act-form button {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 8px;
+}
+
+.cloud-act-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.cloud-act-item .cloud-act-delete {
+  grid-column: 1 / 3;
+  justify-self: end;
+  background: transparent;
+  border: 0;
+  color: #ff8d8d;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 0 0;
+}
+
+.cloud-act-item .cloud-act-delete:hover {
+  color: #ffb0b0;
+}
+
+.cloud-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cloud-schedule-row {
+  display: grid;
+  grid-template-columns: 1.4fr 96px 1fr 1.4fr;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.cloud-schedule-row:hover {
+  border-color: rgba(230, 0, 126, 0.45);
+  background: rgba(230, 0, 126, 0.06);
+}
+
+.cloud-schedule-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cloud-schedule-row.hidden {
+  opacity: 0.58;
+}
+
+.cloud-schedule-day,
+.cloud-schedule-stage,
+.cloud-schedule-entry {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.cloud-schedule-time {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cloud-schedule-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cloud-schedule-entry em {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.cloud-slot-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 24px;
+}
+
+.cloud-slot-modal-box {
+  width: min(440px, 100%);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  padding: 22px;
+}
+
+.cloud-slot-modal-box h3 {
+  margin: 0 0 6px;
+}
+
+.cloud-slot-modal-box p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cloud-schedule-error.modal-error {
+  border: 1px solid rgba(255, 141, 141, 0.35);
+  background: rgba(255, 141, 141, 0.08);
+  border-radius: 5px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+}
+
+.cloud-slot-field {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.cloud-slot-field label,
+.cloud-slot-check {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.cloud-slot-field input,
+.cloud-slot-field select {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.cloud-slot-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.cloud-slot-check input {
+  accent-color: var(--accent);
+}
+
+.cloud-slot-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+@media (max-width: 980px) {
+  .cloud-slot-create {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-slot-create-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cloud-schedule-layout {
+    grid-template-columns: 1fr;
+  }
+}

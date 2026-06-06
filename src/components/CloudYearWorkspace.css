@@ -1,0 +1,23 @@
+.cloud-workspace-badge {
+  color: var(--accent);
+  border: 1px solid rgba(230, 0, 126, 0.45);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cloud-workspace-content {
+  overflow: auto;
+  padding: 24px;
+  gap: 18px;
+}
+
+.cloud-workspace-content .cloud-bands,
+.cloud-workspace-content .cloud-schedule {
+  max-width: 1180px;
+  width: 100%;
+  margin: 0 auto;
+}

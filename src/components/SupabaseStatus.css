@@ -1,0 +1,93 @@
+.supabase-status {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.supabase-status h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.supabase-status p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 560px;
+}
+
+.supabase-status-box,
+.supabase-login {
+  min-width: 280px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.supabase-status-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.supabase-status-box strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.supabase-status-box span,
+.supabase-message {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.supabase-error {
+  color: #ff8d8d !important;
+}
+
+.supabase-status-box.connected {
+  border-color: rgba(230, 0, 126, 0.55);
+}
+
+.migration-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+.supabase-login {
+  display: grid;
+  gap: 8px;
+}
+
+.supabase-login input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+@media (max-width: 760px) {
+  .supabase-status {
+    flex-direction: column;
+  }
+
+  .supabase-status-box,
+  .supabase-login {
+    width: 100%;
+    min-width: 0;
+  }
+}

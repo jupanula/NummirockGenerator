@@ -5,13 +5,17 @@ import type { EventYear } from '../types';
 import { exportBackup, importBackup } from '../utils/dbBackup';
 import { setupBackupFolder, isBackupConfigured } from '../utils/autoBackup';
 import EnvironmentBadge from './EnvironmentBadge';
+import SupabaseStatus from './SupabaseStatus';
+import CloudEventYearList from './CloudEventYearList';
+import type { CloudEventYearSummary } from '../supabase/eventYears';
 import './EventYearList.css';
 
 interface Props {
   onSelectYear: (yearId: number) => void;
+  onOpenCloudYear: (year: CloudEventYearSummary) => void;
 }
 
-export default function EventYearList({ onSelectYear }: Props) {
+export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) {
   const years = useLiveQuery(() => db.eventYears.orderBy('year').reverse().toArray(), []);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -96,6 +100,9 @@ export default function EventYearList({ onSelectYear }: Props) {
       </header>
 
       <main className="year-list-main">
+        <SupabaseStatus />
+        <CloudEventYearList onOpenYear={onOpenCloudYear} />
+
         <div className="year-list-top">
           <h2>Event Years</h2>
           <div className="year-list-actions">

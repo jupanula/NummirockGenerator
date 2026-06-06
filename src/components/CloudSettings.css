@@ -1,0 +1,234 @@
+.cloud-settings {
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cloud-settings-state,
+.cloud-settings-error {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.cloud-settings-error {
+  color: #ff8d8d;
+  border: 1px solid rgba(255, 141, 141, 0.35);
+  background: rgba(255, 141, 141, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.cloud-settings-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.cloud-settings-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cloud-settings-section h2,
+.cloud-settings-section h3 {
+  margin: 0 0 6px;
+}
+
+.cloud-settings-section h2 {
+  font-size: 20px;
+}
+
+.cloud-settings-section h3 {
+  font-size: 15px;
+}
+
+.cloud-settings-section p,
+.cloud-settings-hint {
+  margin: 0 0 14px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cloud-settings-saving {
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cloud-date-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cloud-date-summary span,
+.cloud-stage-tags span {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.cloud-stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cloud-stage-row {
+  display: grid;
+  grid-template-columns: 24px 34px minmax(160px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 10px;
+}
+
+.cloud-stage-row.dragging {
+  opacity: 0.65;
+  border-color: rgba(230, 0, 126, 0.7);
+}
+
+.cloud-stage-drag {
+  width: 24px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: var(--text-muted);
+  cursor: grab;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+}
+
+.cloud-stage-drag:active {
+  cursor: grabbing;
+}
+
+.cloud-stage-drag:hover {
+  color: var(--text-primary);
+}
+
+.cloud-stage-order {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cloud-stage-row input,
+.cloud-stage-add input,
+.cloud-settings-field input,
+.cloud-settings-field select {
+  width: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.cloud-stage-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.cloud-stage-tags .ok {
+  color: #9be7b4;
+  border-color: rgba(155, 231, 180, 0.35);
+}
+
+.cloud-stage-tags .missing {
+  color: #ff8d8d;
+  border-color: rgba(255, 141, 141, 0.35);
+}
+
+.cloud-stage-logo-btn,
+.cloud-stage-delete {
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+.cloud-stage-logo-btn {
+  position: relative;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cloud-stage-logo-btn.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.cloud-stage-logo-btn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cloud-stage-add {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cloud-settings-field {
+  display: grid;
+  grid-template-columns: 180px minmax(180px, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.cloud-settings-field label {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.cloud-color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloud-color-row input[type='color'] {
+  width: 42px;
+  height: 34px;
+  padding: 3px;
+}
+
+.cloud-color-row input[type='text'],
+.cloud-color-row input:not([type]) {
+  max-width: 120px;
+}
+
+.cloud-separator-preview {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px;
+  margin: 14px 0;
+  font-family: NummirockFont, sans-serif;
+  font-size: 18px;
+}

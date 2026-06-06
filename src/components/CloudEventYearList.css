@@ -1,0 +1,106 @@
+.cloud-years {
+  border: 1px solid rgba(230, 0, 126, 0.35);
+  background: rgba(230, 0, 126, 0.06);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.cloud-years-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.cloud-years h2 {
+  font-size: 16px;
+  margin: 0 0 5px;
+}
+
+.cloud-years p,
+.cloud-years-empty,
+.cloud-years-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cloud-years-error {
+  color: #ff8d8d;
+  margin-bottom: 10px;
+}
+
+.cloud-year-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cloud-year-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.cloud-year-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.cloud-year-main {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.cloud-year-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cloud-year-number {
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cloud-year-name {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cloud-year-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cloud-year-stats span {
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+
+.cloud-year-toggle {
+  font-size: 11px;
+  padding: 5px 9px;
+  flex: 0 0 auto;
+}
+
+.cloud-year-open {
+  font-size: 11px;
+  padding: 5px 10px;
+  flex: 0 0 auto;
+}

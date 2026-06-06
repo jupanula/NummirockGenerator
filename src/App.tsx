@@ -4,6 +4,7 @@ import { db } from './db';
 import EventYearList from './components/EventYearList';
 import YearWorkspace from './components/YearWorkspace';
 import AutoDesignEditor from './components/AutoDesignEditor';
+import CloudYearWorkspace from './components/CloudYearWorkspace';
 import {
   writeAutoBackup,
   isBackupConfigured,
@@ -96,6 +97,15 @@ export default function App() {
           onSelectYear={(yearId) =>
             setNav({ view: 'workspace', yearId, tab: 'bands' })
           }
+          onOpenCloudYear={(year) =>
+            setNav({
+              view: 'cloud-workspace',
+              yearId: year.id,
+              yearName: year.name,
+              year: year.year,
+              tab: 'bands',
+            })
+          }
         />
       )}
       {nav.view === 'workspace' && (
@@ -113,6 +123,15 @@ export default function App() {
           onBack={() =>
             setNav({ view: 'workspace', yearId: nav.yearId, tab: 'designs' })
           }
+        />
+      )}
+      {nav.view === 'cloud-workspace' && (
+        <CloudYearWorkspace
+          yearId={nav.yearId}
+          yearName={nav.yearName}
+          year={nav.year}
+          tab={nav.tab}
+          onNavigate={setNav}
         />
       )}
 

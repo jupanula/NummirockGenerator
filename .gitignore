@@ -1,5 +1,15 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 .DS_Store
 backups/
+exports/
+nummirock-backup-*.json
+nummirock-backup-*.zip
+nummirock-schedule-*.csv
+nummirock-schedule-*.xlsx
+nummirock-schedule-*.pdf
+*.backup.json
+*.tsbuildinfo

@@ -153,8 +153,10 @@ export interface AutoDesign {
 }
 
 export type Tab = 'bands' | 'designs' | 'scheduler' | 'settings';
+export type CloudTab = 'bands' | 'scheduler' | 'settings';
 
 export type NavState =
   | { view: 'home' }
   | { view: 'workspace'; yearId: number; tab: Tab; schedulerDayId?: number }
+  | { view: 'cloud-workspace'; yearId: string; yearName: string; year: number; tab: CloudTab }
   | { view: 'auto-design-editor'; yearId: number; designId?: number };
