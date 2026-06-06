@@ -34,17 +34,6 @@
   gap: 10px;
 }
 
-.auto-backup-status {
-  font-size: 11px;
-  color: var(--text-muted);
-  opacity: 0.6;
-}
-
-.auto-backup-setup {
-  font-size: 12px;
-  padding: 5px 10px;
-}
-
 .year-list-main {
   flex: 1;
   overflow-y: auto;
