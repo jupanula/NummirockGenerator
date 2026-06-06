@@ -25,6 +25,7 @@ import {
 } from '../supabase/stages';
 import {
   getCloudYearSettings,
+  updateCloudEventDateRange,
   updateCloudYearNameListSettings,
   type CloudYearSettings,
 } from '../supabase/yearSettings';
@@ -105,13 +106,17 @@ export default function CloudSettings({ eventYearId }: Props) {
   const [separatorChar, setSeparatorChar] = useState('■');
   const [nameTextColor, setNameTextColor] = useState('#ffffff');
   const [customChar, setCustomChar] = useState('');
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
   const [newStageName, setNewStageName] = useState('');
   const [loading, setLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [savingDates, setSavingDates] = useState(false);
   const [savingStages, setSavingStages] = useState(false);
   const [uploadingStageId, setUploadingStageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [datesSaved, setDatesSaved] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -131,11 +136,33 @@ export default function CloudSettings({ eventYearId }: Props) {
         setSeparatorColor(nextSettings.separatorColor);
         setSeparatorChar(nextSettings.separatorChar);
         setNameTextColor(nextSettings.nameTextColor);
+        setRangeStart(nextSettings.startDate ?? '');
+        setRangeEnd(nextSettings.endDate ?? '');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load cloud settings.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveDateRange() {
+    setSavingDates(true);
+    setError(null);
+    try {
+      const result = await updateCloudEventDateRange(eventYearId, rangeStart, rangeEnd || rangeStart);
+      setSettings(current => current
+        ? { ...current, startDate: result.startDate, endDate: result.endDate }
+        : current
+      );
+      setRangeStart(result.startDate);
+      setRangeEnd(result.endDate);
+      setDatesSaved(true);
+      setTimeout(() => setDatesSaved(false), 1800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save event dates.');
+    } finally {
+      setSavingDates(false);
     }
   }
 
@@ -278,6 +305,27 @@ export default function CloudSettings({ eventYearId }: Props) {
         <div className="cloud-date-summary">
           <span>Start date: {settings?.startDate ?? 'Not set'}</span>
           <span>End date: {settings?.endDate ?? 'Not set'}</span>
+        </div>
+      </section>
+
+      <section className="cloud-settings-section">
+        <h3>Event Dates</h3>
+        <p className="cloud-settings-hint">
+          Choose the first and last festival date. The internal event days are generated automatically from this range.
+          Shortening the range deletes slots from days that are removed.
+        </p>
+        <div className="cloud-date-range">
+          <div className="cloud-settings-field stacked">
+            <label>Start date</label>
+            <input type="date" value={rangeStart} onChange={e => setRangeStart(e.target.value)} />
+          </div>
+          <div className="cloud-settings-field stacked">
+            <label>End date</label>
+            <input type="date" value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} />
+          </div>
+          <button className="btn-primary" onClick={saveDateRange} disabled={savingDates || !rangeStart}>
+            {savingDates ? 'Saving...' : datesSaved ? 'Saved' : 'Save dates'}
+          </button>
         </div>
       </section>
 

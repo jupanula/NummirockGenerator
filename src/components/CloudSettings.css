@@ -77,6 +77,13 @@
   font-size: 11px;
 }
 
+.cloud-date-range {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
 .cloud-stage-list {
   display: flex;
   flex-direction: column;
@@ -197,6 +204,14 @@
   margin-bottom: 10px;
 }
 
+.cloud-settings-field.stacked {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
 .cloud-settings-field label {
   color: var(--text-secondary);
   font-size: 12px;
@@ -231,4 +246,17 @@
   margin: 14px 0;
   font-family: NummirockFont, sans-serif;
   font-size: 18px;
+}
+
+@media (max-width: 760px) {
+  .cloud-date-range,
+  .cloud-stage-add,
+  .cloud-stage-row,
+  .cloud-settings-field {
+    grid-template-columns: 1fr;
+  }
+
+  .cloud-stage-tags {
+    justify-content: flex-start;
+  }
 }
