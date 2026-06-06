@@ -34,6 +34,13 @@ interface StageRow {
   id: string;
   name: string;
   sort_order: number;
+  logo_asset_id: string | null;
+}
+
+interface AssetRow {
+  id: string;
+  bucket: string;
+  storage_path: string;
 }
 
 interface BandRow {
@@ -158,6 +165,7 @@ export interface CloudScheduleStageOption {
   id: string;
   name: string;
   order: number;
+  logoUrl?: string;
 }
 
 export async function getCloudScheduleOptions(eventYearId: string): Promise<{
@@ -174,7 +182,7 @@ export async function getCloudScheduleOptions(eventYearId: string): Promise<{
       .order('sort_order', { ascending: true }),
     supabase
       .from('stages')
-      .select('id, name, sort_order')
+      .select('id, name, sort_order, logo_asset_id')
       .eq('event_year_id', eventYearId)
       .order('sort_order', { ascending: true }),
   ]);
@@ -182,16 +190,34 @@ export async function getCloudScheduleOptions(eventYearId: string): Promise<{
   if (daysResult.error) throw daysResult.error;
   if (stagesResult.error) throw stagesResult.error;
 
+  const stageRows = ((stagesResult.data ?? []) as StageRow[]);
+  const logoAssetIds = stageRows.map(stage => stage.logo_asset_id).filter(Boolean) as string[];
+  const logoUrlById = new Map<string, string>();
+
+  if (logoAssetIds.length > 0) {
+    const { data: assets, error: assetsError } = await supabase
+      .from('asset_files')
+      .select('id, bucket, storage_path')
+      .in('id', logoAssetIds);
+    if (assetsError) throw assetsError;
+
+    await Promise.all(((assets ?? []) as AssetRow[]).map(async asset => {
+      const signed = await supabase!.storage.from(asset.bucket).createSignedUrl(asset.storage_path, 3600);
+      if (!signed.error && signed.data?.signedUrl) logoUrlById.set(asset.id, signed.data.signedUrl);
+    }));
+  }
+
   return {
     days: ((daysResult.data ?? []) as DayRow[]).map(day => ({
       id: day.id,
       label: dayLabel(day),
       order: day.sort_order,
     })),
-    stages: ((stagesResult.data ?? []) as StageRow[]).map(stage => ({
+    stages: stageRows.map(stage => ({
       id: stage.id,
       name: stage.name,
       order: stage.sort_order,
+      logoUrl: stage.logo_asset_id ? logoUrlById.get(stage.logo_asset_id) : undefined,
     })),
   };
 }

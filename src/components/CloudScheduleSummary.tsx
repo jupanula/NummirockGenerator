@@ -32,19 +32,11 @@ interface Props {
 }
 
 interface SlotDraft {
-  slotId: string;
-  startMinutes: number;
-  endMinutes: number | '';
-  isTba: boolean;
-  tbaText: string;
-  visibility: 'public' | 'hidden';
-}
-
-interface CreateSlotDraft {
+  slotId?: string;
   dayId: string;
   stageId: string;
   startMinutes: number;
-  endMinutes: number;
+  endMinutes: number | '';
   isTba: boolean;
   tbaText: string;
   visibility: 'public' | 'hidden';
@@ -56,6 +48,8 @@ const DAY_START = 11 * 60;
 const DAY_END = 28 * 60;
 const STEP_MINUTES = 15;
 const DEFAULT_SLOT_DURATION = 60;
+const PX_PER_MINUTE = 1;
+const MIN_SLOT_HEIGHT = 42;
 
 function formatSlotTime(minutes: number): string {
   if (minutes === 24 * 60) return '24:00';
@@ -77,6 +71,21 @@ function timeOptions(start = DAY_START, end = DAY_END) {
   return options;
 }
 
+function roundToStep(minutes: number) {
+  return Math.max(DAY_START, Math.min(DAY_END, Math.round(minutes / STEP_MINUTES) * STEP_MINUTES));
+}
+
+function StageHeader({ stage }: { stage: CloudScheduleStageOption }) {
+  return (
+    <div className={`cloud-calendar-stage-title${stage.logoUrl ? ' has-logo' : ''}`}>
+      {stage.logoUrl
+        ? <img src={stage.logoUrl} alt={stage.name} />
+        : <span>{stage.name}</span>
+      }
+    </div>
+  );
+}
+
 export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   const [slots, setSlots] = useState<CloudScheduleSlot[]>([]);
   const [bands, setBands] = useState<CloudBandSummary[]>([]);
@@ -86,15 +95,6 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<SlotDraft | null>(null);
-  const [createDraft, setCreateDraft] = useState<CreateSlotDraft>({
-    dayId: '',
-    stageId: '',
-    startMinutes: DAY_START,
-    endMinutes: DAY_START + DEFAULT_SLOT_DURATION,
-    isTba: true,
-    tbaText: 'TBA',
-    visibility: 'public',
-  });
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [newActName, setNewActName] = useState('');
@@ -116,15 +116,6 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
         setActs(nextActs);
         setDays(nextOptions.days);
         setStages(nextOptions.stages);
-        setCreateDraft(prev => ({
-          ...prev,
-          dayId: nextOptions.days.some(day => day.id === prev.dayId)
-            ? prev.dayId
-            : nextOptions.days[0]?.id ?? '',
-          stageId: nextOptions.stages.some(stage => stage.id === prev.stageId)
-            ? prev.stageId
-            : nextOptions.stages[0]?.id ?? '',
-        }));
       }
     } catch (err) {
       if (!cancelled?.()) {
@@ -144,56 +135,6 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
     };
   }, [eventYearId]);
 
-  async function addSlot(event: React.FormEvent) {
-    event.preventDefault();
-    if (!canEdit) return;
-    if (saving) return;
-
-    if (!createDraft.dayId || !createDraft.stageId) {
-      setError('Create at least one event day and one stage before adding slots.');
-      return;
-    }
-
-    if (createDraft.endMinutes <= createDraft.startMinutes) {
-      setError('End time must be after start time.');
-      return;
-    }
-
-    const overlaps = slots.some(slot =>
-      slot.dayId === createDraft.dayId &&
-      slot.stageId === createDraft.stageId &&
-      slotsOverlap(createDraft.startMinutes, createDraft.endMinutes, slot.sortMinutes, slot.endSortMinutes ?? undefined)
-    );
-    if (overlaps) {
-      setError('Slot overlaps another slot on this stage.');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      await createCloudScheduleSlot({
-        eventYearId,
-        dayId: createDraft.dayId,
-        stageId: createDraft.stageId,
-        startTime: formatSlotTime(createDraft.startMinutes),
-        sortMinutes: createDraft.startMinutes,
-        endTime: formatSlotTime(createDraft.endMinutes),
-        endSortMinutes: createDraft.endMinutes,
-        isAfterMidnight: isAfterMidnight(createDraft.startMinutes),
-        isEndAfterMidnight: isAfterMidnight(createDraft.endMinutes),
-        isTba: createDraft.isTba,
-        tbaText: createDraft.tbaText.trim() || 'TBA',
-        visibility: createDraft.visibility,
-      });
-      await loadSchedule();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create slot.');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const stats = useMemo(() => {
     const hidden = slots.filter(slot => slot.visibility === 'hidden').length;
     const tba = slots.filter(slot => slot.isTba).length;
@@ -209,6 +150,8 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
     if (!canEdit) return;
     setDraft({
       slotId: slot.id,
+      dayId: slot.dayId,
+      stageId: slot.stageId,
       startMinutes: slot.sortMinutes,
       endMinutes: slot.endSortMinutes ?? '',
       isTba: slot.isTba,
@@ -216,6 +159,23 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       visibility: slot.visibility,
     });
     setError(null);
+  }
+
+  function openSlotEditor(day: CloudScheduleDayOption, stage: CloudScheduleStageOption, event: React.MouseEvent<HTMLDivElement>) {
+    if (!canEdit || (event.target as HTMLElement).closest('.cloud-calendar-slot')) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const y = event.clientY - rect.top;
+    const startMinutes = roundToStep(DAY_START + y / PX_PER_MINUTE);
+    setError(null);
+    setDraft({
+      dayId: day.id,
+      stageId: stage.id,
+      startMinutes,
+      endMinutes: Math.min(startMinutes + DEFAULT_SLOT_DURATION, DAY_END),
+      isTba: true,
+      tbaText: 'TBA',
+      visibility: 'public',
+    });
   }
 
   useEffect(() => {
@@ -239,8 +199,6 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   async function saveDraft() {
     if (!canEdit) return;
     if (!draft || saving) return;
-    const slot = slots.find(item => item.id === draft.slotId);
-    if (!slot) return;
 
     const endMinutes = draft.endMinutes === '' ? null : draft.endMinutes;
     if (endMinutes != null && endMinutes <= draft.startMinutes) {
@@ -249,9 +207,9 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
     }
 
     const overlaps = slots.some(other =>
-      other.id !== slot.id &&
-      other.dayId === slot.dayId &&
-      other.stageId === slot.stageId &&
+      other.id !== draft.slotId &&
+      other.dayId === draft.dayId &&
+      other.stageId === draft.stageId &&
       slotsOverlap(draft.startMinutes, endMinutes ?? undefined, other.sortMinutes, other.endSortMinutes ?? undefined)
     );
     if (overlaps) {
@@ -262,17 +220,28 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
     setSaving(true);
     setError(null);
     try {
-      await updateCloudScheduleSlot(slot.id, {
-        startTime: formatSlotTime(draft.startMinutes),
-        sortMinutes: draft.startMinutes,
-        endTime: endMinutes != null ? formatSlotTime(endMinutes) : null,
-        endSortMinutes: endMinutes,
-        isAfterMidnight: isAfterMidnight(draft.startMinutes),
-        isEndAfterMidnight: endMinutes != null ? isAfterMidnight(endMinutes) : null,
-        isTba: draft.isTba,
-        tbaText: draft.tbaText.trim() || 'TBA',
-        visibility: draft.visibility,
-      });
+      const slotPayload = {
+          startTime: formatSlotTime(draft.startMinutes),
+          sortMinutes: draft.startMinutes,
+          endTime: endMinutes != null ? formatSlotTime(endMinutes) : null,
+          endSortMinutes: endMinutes,
+          isAfterMidnight: isAfterMidnight(draft.startMinutes),
+          isEndAfterMidnight: endMinutes != null ? isAfterMidnight(endMinutes) : null,
+          isTba: draft.isTba,
+          tbaText: draft.tbaText.trim() || 'TBA',
+          visibility: draft.visibility,
+        };
+
+      if (draft.slotId) {
+        await updateCloudScheduleSlot(draft.slotId, slotPayload);
+      } else {
+        await createCloudScheduleSlot({
+          eventYearId,
+          dayId: draft.dayId,
+          stageId: draft.stageId,
+          ...slotPayload,
+        });
+      }
       setDraft(null);
       await loadSchedule();
     } catch (err) {
@@ -284,7 +253,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
 
   async function clearDraftSlot() {
     if (!canEdit) return;
-    if (!draft || saving) return;
+    if (!draft?.slotId || saving) return;
     setSaving(true);
     setError(null);
     try {
@@ -300,7 +269,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
 
   async function deleteDraftSlot() {
     if (!canEdit) return;
-    if (!draft || saving) return;
+    if (!draft?.slotId || saving) return;
     if (!confirm('Delete this slot?')) return;
     setSaving(true);
     setError(null);
@@ -514,6 +483,12 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   if (loading && slots.length === 0) return <div className="cloud-schedule-state">Loading cloud schedule...</div>;
   if (error && slots.length === 0 && !draft) return <div className="cloud-schedule-error">{error}</div>;
 
+  const hourMarks: number[] = [];
+  for (let minutes = DAY_START; minutes <= DAY_END; minutes += 60) hourMarks.push(minutes);
+  const missingSetup = days.length === 0 || stages.length === 0;
+  const draftSlot = draft?.slotId ? slots.find(slot => slot.id === draft.slotId) : undefined;
+  const draftHasAssignment = Boolean(draftSlot?.bandId || draftSlot?.actId);
+
   return (
     <div className="cloud-schedule">
       {error && !draft && <div className="cloud-schedule-error">{error}</div>}
@@ -539,112 +514,6 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
           </button>
         </div>
       </div>
-
-      {canEdit && <form className="cloud-slot-create" onSubmit={addSlot}>
-        <div>
-          <h3>Create Slot</h3>
-          <p>Make the empty slot first, then drag a band or other act onto it.</p>
-        </div>
-        <div className="cloud-slot-create-grid">
-          <label>
-            Day
-            <select
-              value={createDraft.dayId}
-              onChange={event => setCreateDraft({ ...createDraft, dayId: event.target.value })}
-            >
-              {days.map(day => (
-                <option key={day.id} value={day.id}>{day.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Stage
-            <select
-              value={createDraft.stageId}
-              onChange={event => setCreateDraft({ ...createDraft, stageId: event.target.value })}
-            >
-              {stages.map(stage => (
-                <option key={stage.id} value={stage.id}>{stage.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Start
-            <select
-              value={createDraft.startMinutes}
-              onChange={event => {
-                const nextStart = Number(event.target.value);
-                setCreateDraft({
-                  ...createDraft,
-                  startMinutes: nextStart,
-                  endMinutes: createDraft.endMinutes <= nextStart
-                    ? Math.min(nextStart + DEFAULT_SLOT_DURATION, DAY_END)
-                    : createDraft.endMinutes,
-                });
-              }}
-            >
-              {timeOptions().map(minutes => (
-                <option key={minutes} value={minutes}>{formatSlotTime(minutes)}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            End
-            <select
-              value={createDraft.endMinutes}
-              onChange={event => setCreateDraft({ ...createDraft, endMinutes: Number(event.target.value) })}
-            >
-              {timeOptions(createDraft.startMinutes + STEP_MINUTES).map(minutes => (
-                <option key={minutes} value={minutes}>{formatSlotTime(minutes)}</option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Visibility
-            <select
-              value={createDraft.visibility}
-              onChange={event => setCreateDraft({
-                ...createDraft,
-                visibility: event.target.value as CreateSlotDraft['visibility'],
-              })}
-            >
-              <option value="public">Public</option>
-              <option value="hidden">Hidden</option>
-            </select>
-          </label>
-
-          <label className="cloud-slot-create-check">
-            <input
-              type="checkbox"
-              checked={createDraft.isTba}
-              onChange={event => setCreateDraft({ ...createDraft, isTba: event.target.checked })}
-            />
-            TBA
-          </label>
-
-          {createDraft.isTba && (
-            <label>
-              TBA text
-              <input
-                value={createDraft.tbaText}
-                onChange={event => setCreateDraft({ ...createDraft, tbaText: event.target.value })}
-              />
-            </label>
-          )}
-
-          <button
-            className="btn-primary cloud-slot-create-submit"
-            type="submit"
-            disabled={saving || !createDraft.dayId || !createDraft.stageId}
-          >
-            {saving ? 'Saving...' : 'Add slot'}
-          </button>
-        </div>
-      </form>}
 
       <div className="cloud-schedule-layout">
         <aside className="cloud-schedule-sidebar">
@@ -718,41 +587,133 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
           </div>
         </aside>
 
-        <div className="cloud-schedule-list">
-          {slots.map(slot => (
-            <button
-              className={`cloud-schedule-row ${slot.visibility === 'hidden' ? 'hidden' : ''}`}
-              key={slot.id}
-              onClick={() => openSlot(slot)}
-              onDragOver={event => {
-                if (canEdit) event.preventDefault();
-              }}
-              onDrop={event => {
-                event.stopPropagation();
-                void assignDroppedItem(slot, event);
-              }}
-            >
-              <span className="cloud-schedule-day">{slot.dayLabel}</span>
-              <span className="cloud-schedule-time">
-                {slot.endTime ? `${slot.startTime}-${slot.endTime}` : slot.startTime}
-              </span>
-              <span className="cloud-schedule-stage">{slot.stageName}</span>
-              <span className="cloud-schedule-entry">
-                {slot.entryName || 'Empty'}
-                {slot.isTba && <em>TBA</em>}
-                {slot.visibility === 'hidden' && <em>Hidden</em>}
-                {slot.entryType === 'act' && <em>Act</em>}
-              </span>
-            </button>
-          ))}
-        </div>
+        <main className="cloud-schedule-board">
+          {missingSetup ? (
+            <div className="cloud-schedule-empty">
+              Add event dates and stages in Settings before creating slots.
+            </div>
+          ) : (
+            <div className="cloud-calendar-days">
+              {days.map(day => {
+                const daySlots = slots
+                  .filter(slot => slot.dayId === day.id)
+                  .sort((a, b) => a.sortMinutes - b.sortMinutes || a.stageOrder - b.stageOrder);
+
+                return (
+                  <section className="cloud-calendar-day" key={day.id}>
+                    <div className="cloud-calendar-day-title">
+                      <h3>{day.label}</h3>
+                      <span>{daySlots.length} slot{daySlots.length === 1 ? '' : 's'}</span>
+                    </div>
+
+                    <div className="cloud-calendar-wrap">
+                      <div
+                        className="cloud-calendar-header"
+                        style={{ gridTemplateColumns: `72px repeat(${Math.max(1, stages.length)}, minmax(240px, 1fr))` }}
+                      >
+                        <div className="cloud-time-axis-spacer" />
+                        {stages.map(stage => (
+                          <StageHeader key={stage.id} stage={stage} />
+                        ))}
+                      </div>
+
+                      <div
+                        className="cloud-calendar-grid"
+                        style={{
+                          gridTemplateColumns: `72px repeat(${Math.max(1, stages.length)}, minmax(240px, 1fr))`,
+                          height: (DAY_END - DAY_START) * PX_PER_MINUTE,
+                        }}
+                      >
+                        <div className="cloud-time-axis">
+                          {hourMarks.map(minutes => (
+                            <div
+                              key={minutes}
+                              className="cloud-time-mark"
+                              style={{ top: (minutes - DAY_START) * PX_PER_MINUTE }}
+                            >
+                              {formatSlotTime(minutes)}
+                            </div>
+                          ))}
+                        </div>
+
+                        {stages.map(stage => (
+                          <div
+                            key={stage.id}
+                            className={`cloud-calendar-lane${canEdit ? '' : ' readonly'}`}
+                            onClick={event => openSlotEditor(day, stage, event)}
+                          >
+                            {hourMarks.map(minutes => (
+                              <div
+                                key={minutes}
+                                className="cloud-calendar-hour-line"
+                                style={{ top: (minutes - DAY_START) * PX_PER_MINUTE }}
+                              />
+                            ))}
+
+                            {daySlots.filter(slot => slot.stageId === stage.id).map(slot => {
+                              const isTbaSlot = slot.entryType === 'tba';
+                              const top = (slot.sortMinutes - DAY_START) * PX_PER_MINUTE;
+                              const h = Math.max(
+                                MIN_SLOT_HEIGHT,
+                                ((slot.endSortMinutes ?? slot.sortMinutes + DEFAULT_SLOT_DURATION) - slot.sortMinutes) * PX_PER_MINUTE,
+                              );
+
+                              return (
+                                <div
+                                  key={slot.id}
+                                  className={[
+                                    'cloud-calendar-slot',
+                                    slot.visibility === 'hidden' ? 'hidden-slot' : '',
+                                    isTbaSlot ? 'tba-slot' : '',
+                                  ].filter(Boolean).join(' ')}
+                                  style={{ top, height: h }}
+                                  onClick={event => {
+                                    event.stopPropagation();
+                                    openSlot(slot);
+                                  }}
+                                  onDragOver={event => {
+                                    if (canEdit) event.preventDefault();
+                                  }}
+                                  onDrop={event => {
+                                    event.stopPropagation();
+                                    void assignDroppedItem(slot, event);
+                                  }}
+                                >
+                                  <div className="cloud-slot-main">
+                                    <div className="cloud-slot-meta-row">
+                                      <span className="cloud-slot-time-label">{slot.startTime}</span>
+                                      <div className="cloud-slot-badges">
+                                        {isTbaSlot && <span className="cloud-slot-status-badge tba">TBA</span>}
+                                        {slot.visibility === 'hidden' && <span className="cloud-slot-status-badge hidden">Hidden</span>}
+                                        {slot.entryType === 'act' && <span className="cloud-slot-status-badge kind">Act</span>}
+                                      </div>
+                                    </div>
+                                    <strong>{slot.entryName || (slot.isTba ? slot.tbaText || 'TBA' : 'Drop band here')}</strong>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+        </main>
       </div>
 
       {draft && (
         <div className="cloud-slot-modal">
           <div className="cloud-slot-modal-box">
-            <h3>Edit Slot</h3>
-            <p>Edit timing and visibility. Band and act assignment will be added in the next cloud scheduler pass.</p>
+            <h3>{draft.slotId ? 'Edit Slot' : 'Create Slot'}</h3>
+            <p>
+              {draft.slotId
+                ? 'Edit timing and visibility. Bands and acts are assigned by dragging them onto the slot.'
+                : 'Bands and acts are assigned afterwards by dragging them onto the created slot.'}
+            </p>
 
             {error && <div className="cloud-schedule-error modal-error">{error}</div>}
 
@@ -824,11 +785,11 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
             </div>
 
             <div className="cloud-slot-actions">
-              <button className="btn-danger" onClick={deleteDraftSlot} disabled={saving}>Delete</button>
-              <button className="btn-secondary" onClick={clearDraftSlot} disabled={saving}>Clear slot</button>
+              {draft.slotId && <button className="btn-danger" onClick={deleteDraftSlot} disabled={saving}>Delete</button>}
+              {draftHasAssignment && <button className="btn-secondary" onClick={clearDraftSlot} disabled={saving}>Clear slot</button>}
               <button className="btn-ghost" onClick={() => setDraft(null)} disabled={saving}>Cancel</button>
               <button className="btn-primary" onClick={saveDraft} disabled={saving}>
-                {saving ? 'Saving...' : 'Save slot'}
+                {saving ? 'Saving...' : draft.slotId ? 'Save slot' : 'Create slot'}
               </button>
             </div>
           </div>

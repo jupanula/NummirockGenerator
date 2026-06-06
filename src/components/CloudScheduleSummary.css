@@ -243,6 +243,270 @@
   color: #ffb0b0;
 }
 
+.cloud-schedule-board {
+  min-width: 0;
+  overflow: auto;
+}
+
+.cloud-schedule-empty {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  padding: 28px;
+  text-align: center;
+}
+
+.cloud-calendar-days {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.cloud-calendar-day {
+  min-width: 820px;
+}
+
+.cloud-calendar-day-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.cloud-calendar-day-title h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.cloud-calendar-day-title span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cloud-calendar-wrap {
+  min-width: 760px;
+}
+
+.cloud-calendar-header {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-primary);
+  padding-bottom: 10px;
+}
+
+.cloud-time-axis-spacer {
+  width: 72px;
+}
+
+.cloud-calendar-stage-title {
+  background: #000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: #fff;
+  font-family: NummirockFont, sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+  min-height: 88px;
+  min-width: 0;
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.cloud-calendar-stage-title.has-logo {
+  padding: 10px 14px;
+}
+
+.cloud-calendar-stage-title img {
+  display: block;
+  width: auto;
+  max-width: 50%;
+  max-height: 72px;
+  object-fit: contain;
+}
+
+.cloud-calendar-stage-title span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloud-calendar-grid {
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
+  position: relative;
+}
+
+.cloud-time-axis,
+.cloud-calendar-lane {
+  position: relative;
+  min-height: 100%;
+}
+
+.cloud-time-mark {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.cloud-calendar-lane {
+  background:
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    #050505;
+  background-size: 100% 60px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+.cloud-calendar-lane.readonly {
+  cursor: default;
+}
+
+.cloud-calendar-lane:hover {
+  border-color: var(--border-focus);
+}
+
+.cloud-calendar-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  pointer-events: none;
+}
+
+.cloud-calendar-slot {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  min-height: 42px;
+  background: #222;
+  border: 1px solid #303030;
+  border-radius: 5px;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.cloud-calendar-slot.hidden-slot {
+  opacity: 0.78;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 7px,
+      transparent 7px,
+      transparent 14px
+    ),
+    #171717;
+  border-color: #6c3b3b;
+  border-style: dashed;
+}
+
+.cloud-calendar-slot.tba-slot {
+  background: #2a1e27;
+  border-color: rgba(230, 0, 126, 0.65);
+}
+
+.cloud-calendar-slot:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(230, 0, 126, 0.35);
+}
+
+.cloud-slot-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.cloud-slot-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  min-height: 12px;
+}
+
+.cloud-slot-time-label {
+  color: #d8a7c5;
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cloud-slot-badges {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.cloud-slot-status-badge {
+  border-radius: 999px;
+  padding: 1px 5px;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.cloud-slot-status-badge.tba {
+  background: var(--accent);
+  color: #fff;
+}
+
+.cloud-slot-status-badge.hidden {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 141, 141, 0.7);
+  color: #ffb2b2;
+}
+
+.cloud-slot-status-badge.kind {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+.cloud-slot-main strong {
+  font-family: NummirockFont, sans-serif;
+  font-size: 28px;
+  line-height: 0.6;
+  color: #fff;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .cloud-schedule-list {
   display: flex;
   flex-direction: column;
