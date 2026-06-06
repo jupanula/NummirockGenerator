@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+const DEFAULT_SUPABASE_URL = 'https://jgkibfvcfuefnarulhkt.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_-bqsIOxn_dgZf3rMoi_aCA_U11OZwWz';
+
+const supabaseUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_SUPABASE_URL).trim();
 const supabasePublishableKey = ((
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
   || import.meta.env.VITE_SUPABASE_ANON_KEY
-) as string | undefined)?.trim();
+) as string | undefined || DEFAULT_SUPABASE_PUBLISHABLE_KEY).trim();
 
 function isValidSupabaseUrl(value: string | undefined): value is string {
   if (!value) return false;
