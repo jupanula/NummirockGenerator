@@ -15,9 +15,12 @@
   gap: 18px;
 }
 
-.cloud-workspace-content .cloud-bands,
-.cloud-workspace-content .cloud-schedule {
+.cloud-workspace-content .cloud-bands {
   max-width: 1180px;
   width: 100%;
   margin: 0 auto;
+}
+
+.cloud-workspace-content .cloud-schedule {
+  width: 100%;
 }
