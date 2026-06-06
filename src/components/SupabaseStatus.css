@@ -58,15 +58,6 @@
   border-color: rgba(230, 0, 126, 0.55);
 }
 
-.migration-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 10px;
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-  margin-top: 2px;
-}
-
 .supabase-login {
   display: grid;
   gap: 8px;

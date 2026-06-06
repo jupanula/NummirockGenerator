@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabaseConfigStatus, supabase } from '../supabase/client';
 import { getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
-import { migrateBackupToSupabase, type MigrationSummary } from '../supabase/migrateBackup';
 import './SupabaseStatus.css';
 
 export default function SupabaseStatus() {
@@ -13,12 +12,7 @@ export default function SupabaseStatus() {
   const [message, setMessage] = useState<string | null>(null);
   const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
   const [membershipError, setMembershipError] = useState<string | null>(null);
-  const [migrationMessage, setMigrationMessage] = useState<string | null>(null);
-  const [migrationSummary, setMigrationSummary] = useState<MigrationSummary | null>(null);
-  const [migrationError, setMigrationError] = useState<string | null>(null);
-  const [migrating, setMigrating] = useState(false);
   const [busy, setBusy] = useState(false);
-  const migrationInputRef = useRef<HTMLInputElement>(null);
 
   async function loadMembership() {
     if (!supabase) return;
@@ -81,33 +75,6 @@ export default function SupabaseStatus() {
     setBusy(false);
   }
 
-  async function handleMigrationFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file || !membership) return;
-
-    const ok = confirm(
-      'Import this backup into Supabase? This is intended as a one-time migration. If you run it twice, duplicate event years and assets may be created.'
-    );
-    if (!ok) return;
-
-    setMigrating(true);
-    setMigrationError(null);
-    setMigrationSummary(null);
-    setMigrationMessage('Starting migration...');
-    try {
-      const summary = await migrateBackupToSupabase(file, membership, setMigrationMessage);
-      setMigrationSummary(summary);
-      setMigrationMessage('Migration complete.');
-    } catch (err) {
-      console.error(err);
-      setMigrationError(err instanceof Error ? err.message : 'Migration failed.');
-      setMigrationMessage(null);
-    } finally {
-      setMigrating(false);
-    }
-  }
-
   return (
     <section className="supabase-status">
       <div>
@@ -163,39 +130,6 @@ export default function SupabaseStatus() {
             ? <span>Workspace: {membership.workspaceName} ({membership.role})</span>
             : <span>{membershipError ? `Workspace error: ${membershipError}` : 'Loading workspace...'}</span>
           }
-          {membership && (
-            <>
-              <button
-                className="btn-secondary"
-                onClick={() => migrationInputRef.current?.click()}
-                disabled={busy || migrating}
-              >
-                {migrating ? 'Migrating...' : 'Import backup to Supabase'}
-              </button>
-              <input
-                ref={migrationInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleMigrationFile}
-                style={{ display: 'none' }}
-              />
-            </>
-          )}
-          {migrationMessage && <span>{migrationMessage}</span>}
-          {migrationError && <span className="supabase-error">{migrationError}</span>}
-          {migrationSummary && (
-            <div className="migration-summary">
-              <span>Years: {migrationSummary.eventYears}</span>
-              <span>Bands: {migrationSummary.bands}</span>
-              <span>Stages: {migrationSummary.stages}</span>
-              <span>Slots: {migrationSummary.performanceSlots}</span>
-              <span>Assets: {migrationSummary.assets}</span>
-              <span>Auto-designs: {migrationSummary.autoDesigns}</span>
-              {migrationSummary.skippedLegacyDesigns > 0 && (
-                <span>Legacy designs skipped: {migrationSummary.skippedLegacyDesigns}</span>
-              )}
-            </div>
-          )}
           <button className="btn-ghost" onClick={handleSignOut} disabled={busy}>
             Sign out
           </button>
