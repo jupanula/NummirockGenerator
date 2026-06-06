@@ -8,6 +8,7 @@ import EnvironmentBadge from './EnvironmentBadge';
 import SupabaseStatus from './SupabaseStatus';
 import CloudEventYearList from './CloudEventYearList';
 import type { CloudEventYearSummary } from '../supabase/eventYears';
+import { supabaseConfigured } from '../supabase/client';
 import './EventYearList.css';
 
 interface Props {
@@ -22,6 +23,7 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
   const [year, setYear] = useState(new Date().getFullYear());
   const [backupState, setBackupState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
   const [autoBackupReady, setAutoBackupReady] = useState(false);
+  const [showLocalWorkspace, setShowLocalWorkspace] = useState(!supabaseConfigured);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -103,79 +105,95 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
         <SupabaseStatus />
         <CloudEventYearList onOpenYear={onOpenCloudYear} />
 
-        <div className="year-list-top">
-          <h2>Event Years</h2>
-          <div className="year-list-actions">
-            <button className="btn-secondary" onClick={handleExport} disabled={backupState === 'working'}>
-              {backupState === 'working' ? 'Exporting…' : backupState === 'done' ? 'Saved!' : backupState === 'error' ? 'Error' : 'Export backup'}
-            </button>
-            <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={backupState === 'working'}>
-              {backupState === 'working' ? 'Importing…' : backupState === 'done' ? 'Done!' : backupState === 'error' ? 'Error' : 'Import backup'}
-            </button>
-            <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
-            <button className="btn-primary" onClick={() => setShowForm(true)}>
-              + New Year
-            </button>
-          </div>
-        </div>
-
-        {showForm && (
-          <form className="year-form" onSubmit={handleCreate}>
-            <h3>Create Event Year</h3>
-            <div className="field">
-              <label>Name</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. Nummirock 2026"
-                autoFocus
-              />
+        <section className="local-legacy-section">
+          <div className="local-legacy-head">
+            <div>
+              <h2>Local Backup Workspace</h2>
+              <p>IndexedDB data on this browser. Use this for JSON backup/import or emergency local access.</p>
             </div>
-            <div className="field">
-              <label>Year</label>
-              <input
-                type="number"
-                value={year}
-                onChange={e => setYear(Number(e.target.value))}
-                min={2020}
-                max={2099}
-              />
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn-primary">Create</button>
-              <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>
-                Cancel
+            <div className="year-list-actions">
+              <button className="btn-secondary" onClick={handleExport} disabled={backupState === 'working'}>
+                {backupState === 'working' ? 'Exporting…' : backupState === 'done' ? 'Saved!' : backupState === 'error' ? 'Error' : 'Export JSON'}
+              </button>
+              <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={backupState === 'working'}>
+                {backupState === 'working' ? 'Importing…' : backupState === 'done' ? 'Done!' : backupState === 'error' ? 'Error' : 'Import JSON'}
+              </button>
+              <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+              <button className="btn-ghost" onClick={() => setShowLocalWorkspace(open => !open)}>
+                {showLocalWorkspace ? 'Hide local years' : 'Show local years'}
               </button>
             </div>
-          </form>
-        )}
-
-        {years?.length === 0 && !showForm && (
-          <div className="year-list-empty">
-            <p>No event years yet. Create one to get started.</p>
           </div>
-        )}
 
-        <div className="year-cards">
-          {years?.map(y => (
-            <div
-              key={y.id}
-              className="year-card"
-              onClick={() => onSelectYear(y.id!)}
-            >
-              <div className="year-card-info">
-                <span className="year-card-year">{y.year}</span>
-                <span className="year-card-name">{y.name}</span>
+          {showLocalWorkspace && (
+            <>
+              <div className="year-list-top local-years-top">
+                <h2>Local Event Years</h2>
+                <button className="btn-secondary" onClick={() => setShowForm(true)}>
+                  + New Local Year
+                </button>
               </div>
-              <button
-                className="btn-danger year-card-delete"
-                onClick={e => handleDelete(y.id!, e)}
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
+
+              {showForm && (
+                <form className="year-form" onSubmit={handleCreate}>
+                  <h3>Create Local Event Year</h3>
+                  <div className="field">
+                    <label>Name</label>
+                    <input
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      placeholder="e.g. Nummirock 2026"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Year</label>
+                    <input
+                      type="number"
+                      value={year}
+                      onChange={e => setYear(Number(e.target.value))}
+                      min={2020}
+                      max={2099}
+                    />
+                  </div>
+                  <div className="form-actions">
+                    <button type="submit" className="btn-primary">Create</button>
+                    <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {years?.length === 0 && !showForm && (
+                <div className="year-list-empty">
+                  <p>No local event years in this browser.</p>
+                </div>
+              )}
+
+              <div className="year-cards">
+                {years?.map(y => (
+                  <div
+                    key={y.id}
+                    className="year-card"
+                    onClick={() => onSelectYear(y.id!)}
+                  >
+                    <div className="year-card-info">
+                      <span className="year-card-year">{y.year}</span>
+                      <span className="year-card-name">{y.name}</span>
+                    </div>
+                    <button
+                      className="btn-danger year-card-delete"
+                      onClick={e => handleDelete(y.id!, e)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
       </main>
     </div>
   );

@@ -88,14 +88,14 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
     <section className="cloud-years">
       <div className="cloud-years-header">
         <div>
-          <h2>Cloud Event Years</h2>
+          <h2>Event Years</h2>
           <p>Shared Supabase data. Changes here sync across signed-in clients.</p>
         </div>
         <button className="btn-secondary" onClick={loadYears} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
-          + New Cloud Year
+          + New Year
         </button>
       </div>
 
@@ -103,7 +103,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
 
       {showForm && (
         <form className="cloud-year-form" onSubmit={handleCreate}>
-          <h3>Create Cloud Event Year</h3>
+          <h3>Create Event Year</h3>
           <div className="cloud-year-form-grid">
             <div className="field">
               <label>Name</label>
@@ -153,7 +153,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
                   className="btn-primary cloud-year-open"
                   onClick={() => onOpenYear(year)}
                 >
-                  Open cloud workspace
+                  Open workspace
                 </button>
                 <button
                   className="btn-secondary cloud-year-toggle"

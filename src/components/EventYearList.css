@@ -49,7 +49,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 32px;
-  max-width: 700px;
+  max-width: 900px;
   width: 100%;
   margin: 0 auto;
 }
@@ -70,6 +70,41 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.local-legacy-section {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 18px;
+}
+
+.local-legacy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.local-legacy-head h2 {
+  margin: 0 0 5px;
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.local-legacy-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.local-years-top {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
 }
 
 .year-form {
@@ -147,4 +182,17 @@
 
 .year-card:hover .year-card-delete {
   opacity: 1;
+}
+
+@media (max-width: 760px) {
+  .year-list-header,
+  .local-legacy-head,
+  .year-list-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .year-list-main {
+    padding: 20px;
+  }
 }

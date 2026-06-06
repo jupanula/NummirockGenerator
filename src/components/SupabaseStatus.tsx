@@ -113,8 +113,8 @@ export default function SupabaseStatus() {
       <div>
         <h3>Cloud database</h3>
         <p>
-          Supabase is connected for shared cloud editing. Local IndexedDB remains
-          available below as a backup and legacy workspace.
+          Supabase is the shared workspace for cloud editing across signed-in clients.
+          Local IndexedDB tools are kept below as a backup and legacy workspace.
         </p>
       </div>
 
