@@ -122,8 +122,8 @@ export default function SupabaseStatus() {
         <div className="supabase-status-box pending">
           <strong>Not connected</strong>
           <span>
-            Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to `.env` after
-            the Supabase project is created.
+            Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the
+            app environment after the Supabase project is created.
           </span>
         </div>
       )}
