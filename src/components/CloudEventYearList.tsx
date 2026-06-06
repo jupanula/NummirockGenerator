@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabaseConfigured } from '../supabase/client';
-import { getCloudEventYears, type CloudEventYearSummary } from '../supabase/eventYears';
+import {
+  createCloudEventYear,
+  deleteCloudEventYear,
+  getCloudEventYears,
+  type CloudEventYearSummary,
+} from '../supabase/eventYears';
 import CloudBandList from './CloudBandList';
 import CloudScheduleSummary from './CloudScheduleSummary';
 import './CloudEventYearList.css';
@@ -14,6 +19,11 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
   const [openYearId, setOpenYearId] = useState<string | null>(null);
   const [openScheduleYearId, setOpenScheduleYearId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
 
   async function loadYears() {
@@ -34,6 +44,44 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
     void loadYears();
   }, []);
 
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const created = await createCloudEventYear(name, year);
+      setYears(current => [created, ...current].sort((a, b) => b.year - a.year));
+      setName('');
+      setYear(new Date().getFullYear());
+      setShowForm(false);
+      onOpenYear(created);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create cloud event year.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleDelete(yearItem: CloudEventYearSummary) {
+    const ok = confirm(
+      `Delete ${yearItem.name} and all of its cloud bands, designs, schedule, stages and uploaded assets? This cannot be undone.`
+    );
+    if (!ok) return;
+    setDeletingId(yearItem.id);
+    setError(null);
+    try {
+      await deleteCloudEventYear(yearItem.id);
+      setYears(current => current.filter(y => y.id !== yearItem.id));
+      if (openYearId === yearItem.id) setOpenYearId(null);
+      if (openScheduleYearId === yearItem.id) setOpenScheduleYearId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete cloud event year.');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (!supabaseConfigured) return null;
 
   return (
@@ -46,9 +94,47 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
         <button className="btn-secondary" onClick={loadYears} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
+        <button className="btn-primary" onClick={() => setShowForm(true)}>
+          + New Cloud Year
+        </button>
       </div>
 
       {error && <div className="cloud-years-error">{error}</div>}
+
+      {showForm && (
+        <form className="cloud-year-form" onSubmit={handleCreate}>
+          <h3>Create Cloud Event Year</h3>
+          <div className="cloud-year-form-grid">
+            <div className="field">
+              <label>Name</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="e.g. Nummirock 2027"
+                autoFocus
+              />
+            </div>
+            <div className="field">
+              <label>Year</label>
+              <input
+                type="number"
+                value={year}
+                onChange={e => setYear(Number(e.target.value))}
+                min={2020}
+                max={2099}
+              />
+            </div>
+          </div>
+          <div className="form-actions">
+            <button type="submit" className="btn-primary" disabled={creating || !name.trim()}>
+              {creating ? 'Creating...' : 'Create'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => setShowForm(false)} disabled={creating}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {!error && years.length === 0 && !loading && (
         <div className="cloud-years-empty">No cloud event years found.</div>
@@ -80,6 +166,13 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
                   onClick={() => setOpenScheduleYearId(current => current === year.id ? null : year.id)}
                 >
                   {openScheduleYearId === year.id ? 'Hide schedule' : 'Show schedule'}
+                </button>
+                <button
+                  className="btn-danger cloud-year-delete"
+                  onClick={() => void handleDelete(year)}
+                  disabled={deletingId === year.id}
+                >
+                  {deletingId === year.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
