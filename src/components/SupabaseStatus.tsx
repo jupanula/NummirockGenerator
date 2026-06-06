@@ -122,8 +122,12 @@ export default function SupabaseStatus() {
         <div className="supabase-status-box pending">
           <strong>Not connected</strong>
           <span>
-            Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the
-            app environment after the Supabase project is created.
+            {!status.hasUrl
+              ? 'Add `VITE_SUPABASE_URL` to the app environment.'
+              : !status.hasValidUrl
+                ? '`VITE_SUPABASE_URL` is not a valid HTTP or HTTPS URL.'
+                : 'Add `VITE_SUPABASE_PUBLISHABLE_KEY` to the app environment.'
+            }
           </span>
         </div>
       )}

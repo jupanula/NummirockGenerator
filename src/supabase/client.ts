@@ -1,12 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabasePublishableKey = (
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+const supabasePublishableKey = ((
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
   || import.meta.env.VITE_SUPABASE_ANON_KEY
-) as string | undefined;
+) as string | undefined)?.trim();
 
-export const supabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
+function isValidSupabaseUrl(value: string | undefined): value is string {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+const supabaseUrlValid = isValidSupabaseUrl(supabaseUrl);
+
+export const supabaseConfigured = Boolean(supabaseUrlValid && supabasePublishableKey);
 
 export const supabase = supabaseConfigured
   ? createClient(supabaseUrl!, supabasePublishableKey!, {
@@ -22,6 +34,7 @@ export function getSupabaseConfigStatus() {
   return {
     configured: supabaseConfigured,
     hasUrl: Boolean(supabaseUrl),
+    hasValidUrl: supabaseUrlValid,
     hasPublishableKey: Boolean(supabasePublishableKey),
   };
 }
