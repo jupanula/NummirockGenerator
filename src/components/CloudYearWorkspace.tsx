@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import type { CloudTab, NavState } from '../types';
+import CloudAutoDesignEditor from './CloudAutoDesignEditor';
+import CloudAutoDesignList from './CloudAutoDesignList';
 import CloudBandList from './CloudBandList';
 import CloudScheduleSummary from './CloudScheduleSummary';
 import CloudSettings from './CloudSettings';
@@ -15,11 +18,28 @@ interface Props {
 }
 
 export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavigate }: Props) {
+  const [editingDesignId, setEditingDesignId] = useState<string | undefined>(undefined);
+  const [editingDesign, setEditingDesign] = useState(false);
+
   const tabs: { id: CloudTab; label: string }[] = [
     { id: 'bands', label: 'Bands' },
+    { id: 'designs', label: 'Designs' },
     { id: 'scheduler', label: 'Scheduler' },
     { id: 'settings', label: 'Settings' },
   ];
+
+  if (tab === 'designs' && editingDesign) {
+    return (
+      <CloudAutoDesignEditor
+        eventYearId={yearId}
+        designId={editingDesignId}
+        onBack={() => {
+          setEditingDesign(false);
+          setEditingDesignId(undefined);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="workspace cloud-workspace">
@@ -33,7 +53,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
         <div className="workspace-title">
           <span className="workspace-year">{year}</span>
           <span className="workspace-name">{yearName}</span>
-          <span className="cloud-workspace-badge">Cloud read-only</span>
+          <span className="cloud-workspace-badge">Cloud sync</span>
           <EnvironmentBadge />
         </div>
         <nav className="workspace-tabs">
@@ -41,7 +61,11 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
             <button
               key={t.id}
               className={`workspace-tab ${tab === t.id ? 'active' : ''}`}
-              onClick={() => onNavigate({ view: 'cloud-workspace', yearId, yearName, year, tab: t.id })}
+              onClick={() => {
+                setEditingDesign(false);
+                setEditingDesignId(undefined);
+                onNavigate({ view: 'cloud-workspace', yearId, yearName, year, tab: t.id });
+              }}
             >
               {t.label}
             </button>
@@ -51,6 +75,15 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
 
       <main className="workspace-content cloud-workspace-content">
         {tab === 'bands' && <CloudBandList eventYearId={yearId} />}
+        {tab === 'designs' && (
+          <CloudAutoDesignList
+            eventYearId={yearId}
+            onOpenEditor={designId => {
+              setEditingDesignId(designId);
+              setEditingDesign(true);
+            }}
+          />
+        )}
         {tab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} />}
         {tab === 'settings' && <CloudSettings eventYearId={yearId} />}
       </main>

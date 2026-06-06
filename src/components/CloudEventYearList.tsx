@@ -41,7 +41,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
       <div className="cloud-years-header">
         <div>
           <h2>Cloud Event Years</h2>
-          <p>Read-only Supabase data. Local IndexedDB is still active for editing.</p>
+          <p>Shared Supabase data. Changes here sync across signed-in clients.</p>
         </div>
         <button className="btn-secondary" onClick={loadYears} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}

@@ -1,0 +1,10 @@
+@import './DesignList.css';
+
+.cloud-design-card .design-card-actions {
+  opacity: 1;
+}
+
+.cloud-design-note {
+  color: var(--text-muted);
+  font-size: 12px;
+}

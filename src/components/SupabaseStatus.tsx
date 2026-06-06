@@ -113,8 +113,8 @@ export default function SupabaseStatus() {
       <div>
         <h3>Cloud database</h3>
         <p>
-          Supabase migration is being prepared. Local IndexedDB is still the active
-          data source until the shared project is connected.
+          Supabase is connected for shared cloud editing. Local IndexedDB remains
+          available below as a backup and legacy workspace.
         </p>
       </div>
 
