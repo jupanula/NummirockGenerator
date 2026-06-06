@@ -19,6 +19,9 @@ import {
   getCloudScheduleActs,
   type CloudScheduleAct,
 } from '../supabase/scheduleActs';
+import { getCloudScheduleExportData } from '../supabase/scheduleExportData';
+import { exportSchedulePdf } from '../utils/schedulePdfExport';
+import { exportScheduleXlsx } from '../utils/scheduleXlsxExport';
 import { slotsOverlap } from '../utils/scheduleTime';
 import type { ScheduleActType } from '../types';
 import './CloudScheduleSummary.css';
@@ -45,6 +48,8 @@ interface CreateSlotDraft {
   tbaText: string;
   visibility: 'public' | 'hidden';
 }
+
+type ExportKind = 'csv' | 'pdf' | 'xlsx';
 
 const DAY_START = 11 * 60;
 const DAY_END = 28 * 60;
@@ -90,6 +95,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
     visibility: 'public',
   });
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [newActName, setNewActName] = useState('');
   const [newActType, setNewActType] = useState<ScheduleActType>('activity');
 
@@ -357,6 +363,145 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
     }
   }
 
+  function csvValue(value: unknown) {
+    if (value == null) return '';
+    const text = String(value);
+    if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function nextFrame() {
+    return new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  async function runExport(kind: ExportKind, task: () => Promise<void>) {
+    if (exporting) return;
+    setExporting(kind);
+    setError(null);
+    try {
+      await nextFrame();
+      await task();
+    } catch (err) {
+      setError(err instanceof Error ? `Export ${kind.toUpperCase()} failed. ${err.message}` : `Export ${kind.toUpperCase()} failed.`);
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function exportCloudScheduleCsv() {
+    const data = await getCloudScheduleExportData(eventYearId);
+    const daysById = new Map(data.eventDays.map(day => [day.id!, day]));
+    const stagesById = new Map(data.stages.map(stage => [stage.id!, stage]));
+    const bandsById = new Map(data.bands.map(band => [band.id!, band]));
+    const actsById = new Map(data.scheduleActs.map(act => [act.id!, act]));
+
+    const headers = [
+      'eventYear',
+      'eventName',
+      'eventDayOrder',
+      'eventDate',
+      'eventDayFi',
+      'eventDayEn',
+      'eventDisplayDate',
+      'stageOrder',
+      'stageName',
+      'startTime',
+      'endTime',
+      'sortMinutes',
+      'endSortMinutes',
+      'afterMidnight',
+      'endAfterMidnight',
+      'visibility',
+      'isTba',
+      'tbaText',
+      'bandOrder',
+      'bandName',
+      'bandIncludedInDesigns',
+      'scheduleActName',
+      'scheduleActType',
+      'slotId',
+      'bandId',
+      'scheduleActId',
+      'stageId',
+      'eventDayId',
+    ];
+
+    const rows = [...data.slots]
+      .sort((a, b) => {
+        const dayA = daysById.get(a.eventDayId)?.order ?? 0;
+        const dayB = daysById.get(b.eventDayId)?.order ?? 0;
+        const stageA = stagesById.get(a.stageId)?.order ?? 0;
+        const stageB = stagesById.get(b.stageId)?.order ?? 0;
+        return dayA - dayB || a.sortMinutes - b.sortMinutes || stageA - stageB;
+      })
+      .map(slot => {
+        const day = daysById.get(slot.eventDayId);
+        const stage = stagesById.get(slot.stageId);
+        const band = slot.bandId != null ? bandsById.get(slot.bandId) : undefined;
+        const act = slot.scheduleActId != null ? actsById.get(slot.scheduleActId) : undefined;
+        return [
+          data.year.year,
+          data.year.name,
+          day?.order ?? '',
+          day?.date ?? '',
+          day?.titleFi ?? '',
+          day?.titleEn ?? '',
+          day?.displayDate ?? '',
+          stage?.order ?? '',
+          stage?.name ?? '',
+          slot.displayTime,
+          slot.endDisplayTime ?? '',
+          slot.sortMinutes,
+          slot.endSortMinutes ?? '',
+          slot.isAfterMidnight ? 'true' : 'false',
+          slot.isEndAfterMidnight ? 'true' : 'false',
+          slot.visibility,
+          slot.isTba ? 'true' : 'false',
+          slot.tbaText ?? '',
+          band?.order ?? '',
+          band?.name ?? '',
+          band ? (band.includeInDesigns === false ? 'false' : 'true') : '',
+          act?.name ?? '',
+          act?.type ?? '',
+          slot.id ?? '',
+          slot.bandId ?? '',
+          slot.scheduleActId ?? '',
+          slot.stageId,
+          slot.eventDayId,
+        ];
+      });
+
+    const csv = [headers, ...rows].map(row => row.map(csvValue).join(',')).join('\n');
+    downloadBlob(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }), `nummirock-cloud-schedule-${data.year.year}.csv`);
+  }
+
+  async function handleExportCsv() {
+    await runExport('csv', exportCloudScheduleCsv);
+  }
+
+  async function handleExportPdf() {
+    await runExport('pdf', async () => {
+      const data = await getCloudScheduleExportData(eventYearId);
+      await exportSchedulePdf(data);
+    });
+  }
+
+  async function handleExportXlsx() {
+    await runExport('xlsx', async () => {
+      const data = await getCloudScheduleExportData(eventYearId);
+      await exportScheduleXlsx(data);
+    });
+  }
+
   if (loading && slots.length === 0) return <div className="cloud-schedule-state">Loading cloud schedule...</div>;
   if (error && slots.length === 0 && !draft) return <div className="cloud-schedule-error">{error}</div>;
 
@@ -370,6 +515,20 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
         <span>{stats.acts} other acts</span>
         <span>{stats.tba} TBA</span>
         <span>{stats.hidden} hidden</span>
+        <div className="cloud-schedule-export-actions">
+          <button className="btn-secondary" onClick={handleExportCsv} disabled={Boolean(exporting)}>
+            {exporting === 'csv' ? <span className="cloud-export-spinner" /> : null}
+            {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+          </button>
+          <button className="btn-secondary" onClick={handleExportPdf} disabled={Boolean(exporting)}>
+            {exporting === 'pdf' ? <span className="cloud-export-spinner" /> : null}
+            {exporting === 'pdf' ? 'Exporting...' : 'Export PDF'}
+          </button>
+          <button className="btn-secondary" onClick={handleExportXlsx} disabled={Boolean(exporting)}>
+            {exporting === 'xlsx' ? <span className="cloud-export-spinner" /> : null}
+            {exporting === 'xlsx' ? 'Exporting...' : 'Export XLSX'}
+          </button>
+        </div>
       </div>
 
       <form className="cloud-slot-create" onSubmit={addSlot}>
