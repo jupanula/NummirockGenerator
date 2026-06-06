@@ -16,10 +16,12 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   getCloudBands,
+  normalizeCloudBandOrder,
   updateCloudBand,
   updateCloudBandOrder,
   type CloudBandSummary,
 } from '../supabase/bands';
+import CloudBandAssetEditor from './CloudBandAssetEditor';
 import './CloudBandList.css';
 
 interface Props {
@@ -28,12 +30,14 @@ interface Props {
 
 interface CloudBandRowProps {
   band: CloudBandSummary;
+  displayOrder: number;
   editing: boolean;
   saving: boolean;
   draftName: string;
   draftHeadliner: boolean;
   draftInclude: boolean;
   onStartEdit: (band: CloudBandSummary) => void;
+  onOpenAssets: (band: CloudBandSummary) => void;
   onCancelEdit: () => void;
   onSave: (bandId: string) => void;
   onDraftName: (value: string) => void;
@@ -43,12 +47,14 @@ interface CloudBandRowProps {
 
 function CloudBandRow({
   band,
+  displayOrder,
   editing,
   saving,
   draftName,
   draftHeadliner,
   draftInclude,
   onStartEdit,
+  onOpenAssets,
   onCancelEdit,
   onSave,
   onDraftName,
@@ -77,7 +83,7 @@ function CloudBandRow({
       >
         ⋮⋮
       </button>
-      <span className="cloud-band-order">{band.order + 1}</span>
+      <span className="cloud-band-order">{displayOrder + 1}</span>
       {editing ? (
         <>
           <input
@@ -118,9 +124,14 @@ function CloudBandRow({
       ) : (
         <>
           <span className="cloud-band-name">{band.name}</span>
-          <button className="btn-secondary cloud-band-edit" onClick={() => onStartEdit(band)}>
-            Edit
-          </button>
+          <div className="cloud-band-row-actions">
+            <button className="btn-secondary cloud-band-edit" onClick={() => onStartEdit(band)}>
+              Quick edit
+            </button>
+            <button className="btn-secondary cloud-band-edit" onClick={() => onOpenAssets(band)}>
+              Assets
+            </button>
+          </div>
           <div className="cloud-band-tags">
             {band.isHeadliner && <span>Headliner</span>}
             {!band.includeInDesigns && <span>Hidden</span>}
@@ -145,31 +156,33 @@ export default function CloudBandList({ eventYearId }: Props) {
   const [draftInclude, setDraftInclude] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [reordering, setReordering] = useState(false);
+  const [assetEditorBandId, setAssetEditorBandId] = useState<string | undefined>(undefined);
+  const [assetEditorOpen, setAssetEditorOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
+  async function loadBands(cancelled?: () => boolean) {
+    setLoading(true);
+    setError(null);
+    try {
+      await normalizeCloudBandOrder(eventYearId);
+      const nextBands = await getCloudBands(eventYearId);
+      if (!cancelled?.()) setBands(nextBands);
+    } catch (err) {
+      if (!cancelled?.()) {
+        setBands([]);
+        setError(err instanceof Error ? err.message : 'Could not load cloud bands.');
+      }
+    } finally {
+      if (!cancelled?.()) setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
-
-    async function loadBands() {
-      setLoading(true);
-      setError(null);
-      try {
-        const nextBands = await getCloudBands(eventYearId);
-        if (!cancelled) setBands(nextBands);
-      } catch (err) {
-        if (!cancelled) {
-          setBands([]);
-          setError(err instanceof Error ? err.message : 'Could not load cloud bands.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    void loadBands();
+    void loadBands(() => cancelled);
     return () => {
       cancelled = true;
     };
@@ -249,22 +262,58 @@ export default function CloudBandList({ eventYearId }: Props) {
   if (loading) return <div className="cloud-band-state">Loading cloud bands...</div>;
   if (error) return <div className="cloud-band-error">{error}</div>;
 
+  if (assetEditorOpen) {
+    return (
+      <CloudBandAssetEditor
+        eventYearId={eventYearId}
+        bandId={assetEditorBandId}
+        order={bands.length}
+        onClose={() => {
+          setAssetEditorOpen(false);
+          setAssetEditorBandId(undefined);
+        }}
+        onSaved={() => {
+          setAssetEditorOpen(false);
+          setAssetEditorBandId(undefined);
+          void loadBands();
+        }}
+      />
+    );
+  }
+
   return (
     <>
       {reordering && <div className="cloud-band-state compact">Saving band order...</div>}
+      <div className="cloud-band-toolbar">
+        <span>{bands.length} cloud bands</span>
+        <button
+          className="btn-primary"
+          onClick={() => {
+            setAssetEditorBandId(undefined);
+            setAssetEditorOpen(true);
+          }}
+        >
+          + Add Band
+        </button>
+      </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={bands.map(band => band.id)} strategy={verticalListSortingStrategy}>
           <div className="cloud-band-list">
-            {bands.map(band => (
+            {bands.map((band, index) => (
               <CloudBandRow
                 key={band.id}
                 band={band}
+                displayOrder={index}
                 editing={editingId === band.id}
                 saving={savingId === band.id}
                 draftName={draftName}
                 draftHeadliner={draftHeadliner}
                 draftInclude={draftInclude}
                 onStartEdit={startEdit}
+                onOpenAssets={band => {
+                  setAssetEditorBandId(band.id);
+                  setAssetEditorOpen(true);
+                }}
                 onCancelEdit={cancelEdit}
                 onSave={saveBand}
                 onDraftName={setDraftName}
