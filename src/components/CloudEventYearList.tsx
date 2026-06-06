@@ -8,6 +8,7 @@ import {
 } from '../supabase/eventYears';
 import CloudBandList from './CloudBandList';
 import CloudScheduleSummary from './CloudScheduleSummary';
+import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
 import './CloudEventYearList.css';
 
 interface Props {
@@ -25,13 +26,21 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
   const [name, setName] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
+  const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
+
+  const canEdit = canEditWorkspace(membership);
 
   async function loadYears() {
     if (!supabaseConfigured) return;
     setLoading(true);
     setError(null);
     try {
-      setYears(await getCloudEventYears());
+      const [nextMembership, nextYears] = await Promise.all([
+        getCurrentWorkspaceMembership(),
+        getCloudEventYears(),
+      ]);
+      setMembership(nextMembership);
+      setYears(nextYears);
     } catch (err) {
       setYears([]);
       setError(err instanceof Error ? err.message : 'Could not load cloud event years.');
@@ -89,19 +98,25 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
       <div className="cloud-years-header">
         <div>
           <h2>Event Years</h2>
-          <p>Shared Supabase data. Changes here sync across signed-in clients.</p>
+          <p>
+            Shared Supabase data. {canEdit
+              ? 'Changes here sync across signed-in clients.'
+              : 'You have view-only access in this workspace.'}
+          </p>
         </div>
         <button className="btn-secondary" onClick={loadYears} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          + New Year
-        </button>
+        {canEdit && (
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            + New Year
+          </button>
+        )}
       </div>
 
       {error && <div className="cloud-years-error">{error}</div>}
 
-      {showForm && (
+      {showForm && canEdit && (
         <form className="cloud-year-form" onSubmit={handleCreate}>
           <h3>Create Event Year</h3>
           <div className="cloud-year-form-grid">
@@ -167,13 +182,15 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
                 >
                   {openScheduleYearId === year.id ? 'Hide schedule' : 'Show schedule'}
                 </button>
-                <button
-                  className="btn-danger cloud-year-delete"
-                  onClick={() => void handleDelete(year)}
-                  disabled={deletingId === year.id}
-                >
-                  {deletingId === year.id ? 'Deleting...' : 'Delete'}
-                </button>
+                {canEdit && (
+                  <button
+                    className="btn-danger cloud-year-delete"
+                    onClick={() => void handleDelete(year)}
+                    disabled={deletingId === year.id}
+                  >
+                    {deletingId === year.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                )}
               </div>
             </div>
             <div className="cloud-year-stats">
@@ -182,8 +199,8 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
               <span>{year.slots} slots</span>
               <span>{year.autoDesigns} auto-designs</span>
             </div>
-            {openYearId === year.id && <CloudBandList eventYearId={year.id} />}
-            {openScheduleYearId === year.id && <CloudScheduleSummary eventYearId={year.id} />}
+            {openYearId === year.id && <CloudBandList eventYearId={year.id} canEdit={canEdit} />}
+            {openScheduleYearId === year.id && <CloudScheduleSummary eventYearId={year.id} canEdit={canEdit} />}
           </div>
         ))}
       </div>

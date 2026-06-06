@@ -26,6 +26,7 @@ import './CloudBandList.css';
 
 interface Props {
   eventYearId: string;
+  canEdit: boolean;
 }
 
 interface CloudBandRowProps {
@@ -43,6 +44,7 @@ interface CloudBandRowProps {
   onDraftName: (value: string) => void;
   onDraftHeadliner: (value: boolean) => void;
   onDraftInclude: (value: boolean) => void;
+  canEdit: boolean;
 }
 
 function CloudBandRow({
@@ -60,8 +62,12 @@ function CloudBandRow({
   onDraftName,
   onDraftHeadliner,
   onDraftInclude,
+  canEdit,
 }: CloudBandRowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: band.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: band.id,
+    disabled: !canEdit,
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -78,6 +84,7 @@ function CloudBandRow({
         type="button"
         title="Drag to reorder"
         aria-label={`Drag ${band.name}`}
+        disabled={!canEdit}
         {...attributes}
         {...listeners}
       >
@@ -124,14 +131,16 @@ function CloudBandRow({
       ) : (
         <>
           <span className="cloud-band-name">{band.name}</span>
-          <div className="cloud-band-row-actions">
-            <button className="btn-secondary cloud-band-edit" onClick={() => onStartEdit(band)}>
-              Quick edit
-            </button>
-            <button className="btn-secondary cloud-band-edit" onClick={() => onOpenAssets(band)}>
-              Assets
-            </button>
-          </div>
+          {canEdit && (
+            <div className="cloud-band-row-actions">
+              <button className="btn-secondary cloud-band-edit" onClick={() => onStartEdit(band)}>
+                Quick edit
+              </button>
+              <button className="btn-secondary cloud-band-edit" onClick={() => onOpenAssets(band)}>
+                Assets
+              </button>
+            </div>
+          )}
           <div className="cloud-band-tags">
             {band.isHeadliner && <span>Headliner</span>}
             {!band.includeInDesigns && <span>Hidden</span>}
@@ -146,7 +155,7 @@ function CloudBandRow({
   );
 }
 
-export default function CloudBandList({ eventYearId }: Props) {
+export default function CloudBandList({ eventYearId, canEdit }: Props) {
   const [bands, setBands] = useState<CloudBandSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,6 +198,7 @@ export default function CloudBandList({ eventYearId }: Props) {
   }, [eventYearId]);
 
   function startEdit(band: CloudBandSummary) {
+    if (!canEdit) return;
     setEditingId(band.id);
     setDraftName(band.name);
     setDraftHeadliner(band.isHeadliner);
@@ -204,6 +214,7 @@ export default function CloudBandList({ eventYearId }: Props) {
   }
 
   async function saveBand(bandId: string) {
+    if (!canEdit) return;
     const name = draftName.trim();
     if (!name) {
       setError('Band name cannot be empty.');
@@ -232,6 +243,7 @@ export default function CloudBandList({ eventYearId }: Props) {
   }
 
   async function handleDragEnd(event: DragEndEvent) {
+    if (!canEdit) return;
     const { active, over } = event;
     if (!over || active.id === over.id || reordering) return;
 
@@ -262,7 +274,7 @@ export default function CloudBandList({ eventYearId }: Props) {
   if (loading) return <div className="cloud-band-state">Loading cloud bands...</div>;
   if (error) return <div className="cloud-band-error">{error}</div>;
 
-  if (assetEditorOpen) {
+  if (assetEditorOpen && canEdit) {
     return (
       <CloudBandAssetEditor
         eventYearId={eventYearId}
@@ -286,15 +298,17 @@ export default function CloudBandList({ eventYearId }: Props) {
       {reordering && <div className="cloud-band-state compact">Saving band order...</div>}
       <div className="cloud-band-toolbar">
         <span>{bands.length} cloud bands</span>
-        <button
-          className="btn-primary"
-          onClick={() => {
-            setAssetEditorBandId(undefined);
-            setAssetEditorOpen(true);
-          }}
-        >
-          + Add Band
-        </button>
+        {canEdit && (
+          <button
+            className="btn-primary"
+            onClick={() => {
+              setAssetEditorBandId(undefined);
+              setAssetEditorOpen(true);
+            }}
+          >
+            + Add Band
+          </button>
+        )}
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={bands.map(band => band.id)} strategy={verticalListSortingStrategy}>
@@ -319,6 +333,7 @@ export default function CloudBandList({ eventYearId }: Props) {
                 onDraftName={setDraftName}
                 onDraftHeadliner={setDraftHeadliner}
                 onDraftInclude={setDraftInclude}
+                canEdit={canEdit}
               />
             ))}
           </div>

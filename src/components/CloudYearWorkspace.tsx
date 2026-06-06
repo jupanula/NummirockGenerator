@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CloudTab, NavState } from '../types';
+import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
 import CloudAutoDesignEditor from './CloudAutoDesignEditor';
 import CloudAutoDesignList from './CloudAutoDesignList';
 import CloudBandList from './CloudBandList';
@@ -20,6 +21,22 @@ interface Props {
 export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavigate }: Props) {
   const [editingDesignId, setEditingDesignId] = useState<string | undefined>(undefined);
   const [editingDesign, setEditingDesign] = useState(false);
+  const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
+  const canEdit = canEditWorkspace(membership);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentWorkspaceMembership()
+      .then(nextMembership => {
+        if (!cancelled) setMembership(nextMembership);
+      })
+      .catch(() => {
+        if (!cancelled) setMembership(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const tabs: { id: CloudTab; label: string }[] = [
     { id: 'bands', label: 'Bands' },
@@ -33,6 +50,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
       <CloudAutoDesignEditor
         eventYearId={yearId}
         designId={editingDesignId}
+        canEdit={canEdit}
         onBack={() => {
           setEditingDesign(false);
           setEditingDesignId(undefined);
@@ -54,6 +72,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
           <span className="workspace-year">{year}</span>
           <span className="workspace-name">{yearName}</span>
           <span className="cloud-workspace-badge">Cloud sync</span>
+          {membership && <span className="cloud-workspace-badge">{membership.role}</span>}
           <EnvironmentBadge />
         </div>
         <nav className="workspace-tabs">
@@ -74,18 +93,19 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
       </header>
 
       <main className="workspace-content cloud-workspace-content">
-        {tab === 'bands' && <CloudBandList eventYearId={yearId} />}
+        {tab === 'bands' && <CloudBandList eventYearId={yearId} canEdit={canEdit} />}
         {tab === 'designs' && (
           <CloudAutoDesignList
             eventYearId={yearId}
+            canEdit={canEdit}
             onOpenEditor={designId => {
               setEditingDesignId(designId);
               setEditingDesign(true);
             }}
           />
         )}
-        {tab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} />}
-        {tab === 'settings' && <CloudSettings eventYearId={yearId} />}
+        {tab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} canEdit={canEdit} />}
+        {tab === 'settings' && <CloudSettings eventYearId={yearId} canEdit={canEdit} />}
       </main>
     </div>
   );

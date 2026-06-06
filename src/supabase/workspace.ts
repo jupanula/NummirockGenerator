@@ -6,6 +6,10 @@ export interface WorkspaceMembership {
   role: 'owner' | 'editor' | 'viewer';
 }
 
+export function canEditWorkspace(membership: WorkspaceMembership | null): boolean {
+  return membership?.role === 'owner' || membership?.role === 'editor';
+}
+
 interface MembershipRow {
   role: 'owner' | 'editor' | 'viewer';
   workspaces: {

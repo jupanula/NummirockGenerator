@@ -11,6 +11,7 @@ import './CloudAutoDesignList.css';
 interface Props {
   eventYearId: string;
   onOpenEditor: (designId?: string) => void;
+  canEdit: boolean;
 }
 
 function aspectRatioFromConfig(config: Record<string, unknown>) {
@@ -23,11 +24,13 @@ function CloudAutoDesignCard({
   onOpen,
   onDuplicate,
   onDelete,
+  canEdit,
 }: {
   design: CloudAutoDesign;
   onOpen: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  canEdit: boolean;
 }) {
   const { w, h } = canvasDimensions(aspectRatioFromConfig(design.config));
 
@@ -41,32 +44,34 @@ function CloudAutoDesignCard({
       </div>
       <div className="design-card-info">
         <span className="design-card-name">{design.name}</span>
-        <div className="design-card-actions">
-          <button
-            className="btn-secondary design-card-action"
-            onClick={event => {
-              event.stopPropagation();
-              onDuplicate();
-            }}
-          >
-            Duplicate
-          </button>
-          <button
-            className="btn-danger design-card-action"
-            onClick={event => {
-              event.stopPropagation();
-              onDelete();
-            }}
-          >
-            Delete
-          </button>
-        </div>
+        {canEdit && (
+          <div className="design-card-actions">
+            <button
+              className="btn-secondary design-card-action"
+              onClick={event => {
+                event.stopPropagation();
+                onDuplicate();
+              }}
+            >
+              Duplicate
+            </button>
+            <button
+              className="btn-danger design-card-action"
+              onClick={event => {
+                event.stopPropagation();
+                onDelete();
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default function CloudAutoDesignList({ eventYearId, onOpenEditor }: Props) {
+export default function CloudAutoDesignList({ eventYearId, onOpenEditor, canEdit }: Props) {
   const [designs, setDesigns] = useState<CloudAutoDesign[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,6 +95,7 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor }: Props
   }, [eventYearId]);
 
   async function duplicateDesign(design: CloudAutoDesign) {
+    if (!canEdit) return;
     setSaving(true);
     setError(null);
     try {
@@ -103,6 +109,7 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor }: Props
   }
 
   async function deleteDesign(design: CloudAutoDesign) {
+    if (!canEdit) return;
     if (!confirm(`Delete design "${design.name}"?`)) return;
     setSaving(true);
     setError(null);
@@ -124,16 +131,20 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor }: Props
             {loading ? 'Loading designs...' : `${designs.length} cloud designs`}
           </span>
           <div className="cloud-design-note">
-            Shared Supabase designs. Changes are saved only when you press Save in the editor.
+            Shared Supabase designs. {canEdit
+              ? 'Changes are saved only when you press Save in the editor.'
+              : 'You have view-only access; exports are still available inside a design.'}
           </div>
         </div>
         <div className="design-card-actions" style={{ opacity: 1 }}>
           <button className="btn-secondary" onClick={loadDesigns} disabled={loading || saving}>
             Refresh
           </button>
-          <button className="btn-primary" onClick={() => onOpenEditor(undefined)} disabled={loading || saving}>
-            + New Design
-          </button>
+          {canEdit && (
+            <button className="btn-primary" onClick={() => onOpenEditor(undefined)} disabled={loading || saving}>
+              + New Design
+            </button>
+          )}
         </div>
       </div>
       {error && <div className="cloud-schedule-error">{error}</div>}
@@ -150,6 +161,7 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor }: Props
             onOpen={() => onOpenEditor(design.id)}
             onDuplicate={() => duplicateDesign(design)}
             onDelete={() => deleteDesign(design)}
+            canEdit={canEdit}
           />
         ))}
       </div>

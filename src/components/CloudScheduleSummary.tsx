@@ -28,6 +28,7 @@ import './CloudScheduleSummary.css';
 
 interface Props {
   eventYearId: string;
+  canEdit: boolean;
 }
 
 interface SlotDraft {
@@ -76,7 +77,7 @@ function timeOptions(start = DAY_START, end = DAY_END) {
   return options;
 }
 
-export default function CloudScheduleSummary({ eventYearId }: Props) {
+export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   const [slots, setSlots] = useState<CloudScheduleSlot[]>([]);
   const [bands, setBands] = useState<CloudBandSummary[]>([]);
   const [acts, setActs] = useState<CloudScheduleAct[]>([]);
@@ -145,6 +146,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
 
   async function addSlot(event: React.FormEvent) {
     event.preventDefault();
+    if (!canEdit) return;
     if (saving) return;
 
     if (!createDraft.dayId || !createDraft.stageId) {
@@ -204,6 +206,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
   const assignedActIds = useMemo(() => new Set(slots.map(slot => slot.actId).filter(Boolean) as string[]), [slots]);
 
   function openSlot(slot: CloudScheduleSlot) {
+    if (!canEdit) return;
     setDraft({
       slotId: slot.id,
       startMinutes: slot.sortMinutes,
@@ -234,6 +237,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
   }, [draft, slots]);
 
   async function saveDraft() {
+    if (!canEdit) return;
     if (!draft || saving) return;
     const slot = slots.find(item => item.id === draft.slotId);
     if (!slot) return;
@@ -279,6 +283,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
   }
 
   async function clearDraftSlot() {
+    if (!canEdit) return;
     if (!draft || saving) return;
     setSaving(true);
     setError(null);
@@ -294,6 +299,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
   }
 
   async function deleteDraftSlot() {
+    if (!canEdit) return;
     if (!draft || saving) return;
     if (!confirm('Delete this slot?')) return;
     setSaving(true);
@@ -311,6 +317,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
 
   async function assignDroppedItem(slot: CloudScheduleSlot, event: React.DragEvent) {
     event.preventDefault();
+    if (!canEdit) return;
     const payload = event.dataTransfer.getData('application/x-nummirock-cloud-schedule-item')
       || event.dataTransfer.getData('text/plain');
     const [kind, id] = payload.includes(':') ? payload.split(':') : ['band', payload];
@@ -331,6 +338,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
 
   async function addAct(event: React.FormEvent) {
     event.preventDefault();
+    if (!canEdit) return;
     const name = newActName.trim();
     if (!name || saving) return;
     setSaving(true);
@@ -347,6 +355,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
   }
 
   async function removeAct(act: CloudScheduleAct) {
+    if (!canEdit) return;
     const detail = act.slotCount > 0
       ? ` This will clear ${act.slotCount} assigned slot${act.slotCount === 1 ? '' : 's'}.`
       : '';
@@ -531,7 +540,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
         </div>
       </div>
 
-      <form className="cloud-slot-create" onSubmit={addSlot}>
+      {canEdit && <form className="cloud-slot-create" onSubmit={addSlot}>
         <div>
           <h3>Create Slot</h3>
           <p>Make the empty slot first, then drag a band or other act onto it.</p>
@@ -635,19 +644,20 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
             {saving ? 'Saving...' : 'Add slot'}
           </button>
         </div>
-      </form>
+      </form>}
 
       <div className="cloud-schedule-layout">
         <aside className="cloud-schedule-sidebar">
           <h3>Bands</h3>
-          <p>Drag onto a slot. Bands can be used more than once.</p>
+          <p>{canEdit ? 'Drag onto a slot. Bands can be used more than once.' : 'View-only schedule. Exports are still available.'}</p>
           <div className="cloud-schedule-palette">
             {bands.map(band => (
               <div
                 key={band.id}
                 className="cloud-schedule-palette-item"
-                draggable
+                draggable={canEdit}
                 onDragStart={event => {
+                  if (!canEdit) return;
                   event.dataTransfer.setData('application/x-nummirock-cloud-schedule-item', `band:${band.id}`);
                   event.dataTransfer.setData('text/plain', `band:${band.id}`);
                 }}
@@ -659,7 +669,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
           </div>
 
           <h3>Other Acts</h3>
-          <form className="cloud-act-form" onSubmit={addAct}>
+          {canEdit && <form className="cloud-act-form" onSubmit={addAct}>
             <input
               value={newActName}
               onChange={event => setNewActName(event.target.value)}
@@ -677,21 +687,22 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
             <button className="btn-secondary" type="submit" disabled={saving || !newActName.trim()}>
               Add
             </button>
-          </form>
+          </form>}
           <div className="cloud-schedule-palette">
             {acts.map(act => (
               <div
                 key={act.id}
                 className="cloud-schedule-palette-item cloud-act-item"
-                draggable
+                draggable={canEdit}
                 onDragStart={event => {
+                  if (!canEdit) return;
                   event.dataTransfer.setData('application/x-nummirock-cloud-schedule-item', `act:${act.id}`);
                   event.dataTransfer.setData('text/plain', `act:${act.id}`);
                 }}
               >
                 <span>{act.name}</span>
                 <em>{assignedActIds.has(act.id) ? 'Assigned' : act.type}</em>
-                <button
+                {canEdit && <button
                   type="button"
                   className="cloud-act-delete"
                   aria-label={`Delete ${act.name}`}
@@ -701,7 +712,7 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
                   }}
                 >
                   Delete
-                </button>
+                </button>}
               </div>
             ))}
           </div>
@@ -713,7 +724,9 @@ export default function CloudScheduleSummary({ eventYearId }: Props) {
               className={`cloud-schedule-row ${slot.visibility === 'hidden' ? 'hidden' : ''}`}
               key={slot.id}
               onClick={() => openSlot(slot)}
-              onDragOver={event => event.preventDefault()}
+              onDragOver={event => {
+                if (canEdit) event.preventDefault();
+              }}
               onDrop={event => {
                 event.stopPropagation();
                 void assignDroppedItem(slot, event);

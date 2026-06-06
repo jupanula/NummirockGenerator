@@ -23,12 +23,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function SliderField({ label, value, min, max, step = 1, onChange }: {
+function SliderField({ label, value, min, max, step = 1, disabled = false, onChange }: {
   label: string;
   value: number;
   min: number;
   max: number;
   step?: number;
+  disabled?: boolean;
   onChange: (v: number) => void;
 }) {
   return (
@@ -40,6 +41,7 @@ function SliderField({ label, value, min, max, step = 1, onChange }: {
         max={max}
         step={step}
         value={value}
+        disabled={disabled}
         onChange={e => onChange(Number(e.target.value))}
       />
     </div>
@@ -49,10 +51,11 @@ function SliderField({ label, value, min, max, step = 1, onChange }: {
 interface Props {
   eventYearId: string;
   designId?: string;
+  canEdit: boolean;
   onBack: () => void;
 }
 
-export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }: Props) {
+export default function CloudAutoDesignEditor({ eventYearId, designId, canEdit, onBack }: Props) {
   const [eventYear, setEventYear] = useState<EventYear | null>(null);
   const [allBands, setAllBands] = useState<Band[]>([]);
   const [loading, setLoading] = useState(true);
@@ -275,6 +278,7 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Design name"
+          disabled={!canEdit}
         />
         <div className="ade-header-actions">
           <div className="ade-scale-group">
@@ -294,9 +298,11 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
           <button className="btn-secondary" onClick={handleExportPdf} disabled={exportingPdf}>
             {exportingPdf ? 'Exporting…' : 'PDF'}
           </button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
+          {canEdit && (
+            <button className="btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </div>
       </header>
 
@@ -314,6 +320,7 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
                 max={4}
                 step={0.01}
                 value={aspectRatio}
+                disabled={!canEdit}
                 onChange={e => setAspectRatio(Number(e.target.value))}
               />
               <div className="ade-field-hint">{CW} × {CH} px</div>
@@ -326,6 +333,7 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
               <input
                 type="checkbox"
                 checked={includeHiddenBands}
+                disabled={!canEdit}
                 onChange={e => setIncludeHiddenBands(e.target.checked)}
               />
               Include hidden bands
@@ -335,9 +343,9 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
                 {hiddenBandsCount} hidden band{hiddenBandsCount === 1 ? '' : 's'} {includeHiddenBands ? 'included' : 'excluded'}
               </div>
             )}
-            <SliderField label="Total bands shown" value={totalBands} min={0} max={maxBands} onChange={handleTotalBands} />
-            <SliderField label={`Photo+Logo (first ${photoBandCount})`} value={photoBandCount} min={0} max={totalBands} onChange={handlePhotoBandCount} />
-            <SliderField label={`Logo only (next ${logoBandCount})`} value={logoBandCount} min={0} max={totalBands - photoBandCount} onChange={handleLogoBandCount} />
+            <SliderField disabled={!canEdit} label="Total bands shown" value={totalBands} min={0} max={maxBands} onChange={handleTotalBands} />
+            <SliderField disabled={!canEdit} label={`Photo+Logo (first ${photoBandCount})`} value={photoBandCount} min={0} max={totalBands} onChange={handlePhotoBandCount} />
+            <SliderField disabled={!canEdit} label={`Logo only (next ${logoBandCount})`} value={logoBandCount} min={0} max={totalBands - photoBandCount} onChange={handleLogoBandCount} />
             <div className="ade-band-summary">
               <span className="ade-band-chip photo">Photos: {photoBandCount}</span>
               <span className="ade-band-chip logo">Logos: {logoBandCount}</span>
@@ -347,30 +355,30 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, onBack }:
 
           {photoBandCount > 0 && (
             <Section title="Photo + Logo">
-              <SliderField label="First row bands" value={photoFirstRow} min={1} max={Math.max(1, photoBandCount)} onChange={setPhotoFirstRow} />
-              <SliderField label="Gap between bands" value={photoHGap} min={0} max={60} onChange={setPhotoHGap} />
-              <SliderField label="Gap between rows" value={photoRowGap} min={-200} max={0} onChange={setPhotoRowGap} />
-              <SliderField label="Gap below section" value={photoGapBelow} min={-80} max={80} onChange={setPhotoGapBelow} />
+              <SliderField disabled={!canEdit} label="First row bands" value={photoFirstRow} min={1} max={Math.max(1, photoBandCount)} onChange={setPhotoFirstRow} />
+              <SliderField disabled={!canEdit} label="Gap between bands" value={photoHGap} min={0} max={60} onChange={setPhotoHGap} />
+              <SliderField disabled={!canEdit} label="Gap between rows" value={photoRowGap} min={-200} max={0} onChange={setPhotoRowGap} />
+              <SliderField disabled={!canEdit} label="Gap below section" value={photoGapBelow} min={-80} max={80} onChange={setPhotoGapBelow} />
             </Section>
           )}
 
           {logoBandCount > 0 && (
             <Section title="Logo only">
-              <SliderField label="Bands on first row" value={logoFirstRow} min={0} max={Math.max(1, logoBandCount)} onChange={setLogoFirstRow} />
-              <SliderField label="Normalisation" value={logoNorm} min={0} max={100} onChange={setLogoNorm} />
-              <SliderField label="Gap between logos" value={logoHGap} min={0} max={80} onChange={setLogoHGap} />
-              <SliderField label="Gap between rows %" value={logoRowGap} min={-30} max={60} onChange={setLogoRowGap} />
-              <SliderField label="Gap below section" value={logoGapBelow} min={-40} max={120} onChange={setLogoGapBelow} />
+              <SliderField disabled={!canEdit} label="Bands on first row" value={logoFirstRow} min={0} max={Math.max(1, logoBandCount)} onChange={setLogoFirstRow} />
+              <SliderField disabled={!canEdit} label="Normalisation" value={logoNorm} min={0} max={100} onChange={setLogoNorm} />
+              <SliderField disabled={!canEdit} label="Gap between logos" value={logoHGap} min={0} max={80} onChange={setLogoHGap} />
+              <SliderField disabled={!canEdit} label="Gap between rows %" value={logoRowGap} min={-30} max={60} onChange={setLogoRowGap} />
+              <SliderField disabled={!canEdit} label="Gap below section" value={logoGapBelow} min={-40} max={120} onChange={setLogoGapBelow} />
             </Section>
           )}
 
           {nameBandCount > 0 && (
             <Section title="Names">
-              <SliderField label="Bands per row" value={nameFirstRow} min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
-              <SliderField label="Font size %" value={nameFontScale} min={50} max={200} onChange={setNameFontScale} />
-              <SliderField label="Width normalisation" value={nameNorm} min={0} max={100} onChange={setNameNorm} />
-              <SliderField label="Gap between names" value={nameHGap} min={0} max={200} onChange={setNameHGap} />
-              <SliderField label="Gap between rows" value={nameRowGap} min={-100} max={0} onChange={setNameRowGap} />
+              <SliderField disabled={!canEdit} label="Bands per row" value={nameFirstRow} min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
+              <SliderField disabled={!canEdit} label="Font size %" value={nameFontScale} min={50} max={200} onChange={setNameFontScale} />
+              <SliderField disabled={!canEdit} label="Width normalisation" value={nameNorm} min={0} max={100} onChange={setNameNorm} />
+              <SliderField disabled={!canEdit} label="Gap between names" value={nameHGap} min={0} max={200} onChange={setNameHGap} />
+              <SliderField disabled={!canEdit} label="Gap between rows" value={nameRowGap} min={-100} max={0} onChange={setNameRowGap} />
             </Section>
           )}
         </aside>

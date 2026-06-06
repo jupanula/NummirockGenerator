@@ -44,6 +44,7 @@ const SEPARATOR_OPTIONS = [
 
 interface Props {
   eventYearId: string;
+  canEdit: boolean;
 }
 
 function CloudStageRow({
@@ -52,14 +53,19 @@ function CloudStageRow({
   onRename,
   onLogo,
   onDelete,
+  canEdit,
 }: {
   stage: CloudStage;
   uploading: boolean;
   onRename: (stage: CloudStage, name: string) => void;
   onLogo: (stage: CloudStage, file?: File) => void;
   onDelete: (stage: CloudStage) => void;
+  canEdit: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stage.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: stage.id,
+    disabled: !canEdit,
+  });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -72,17 +78,19 @@ function CloudStageRow({
         type="button"
         title="Drag to reorder"
         aria-label={`Drag ${stage.name}`}
+        disabled={!canEdit}
         {...attributes}
         {...listeners}
       >
         ⋮⋮
       </button>
       <span className="cloud-stage-order">{stage.order + 1}</span>
-      <input value={stage.name} onChange={e => onRename(stage, e.target.value)} />
+      <input value={stage.name} disabled={!canEdit} onChange={e => onRename(stage, e.target.value)} />
       <div className="cloud-stage-tags">
         <span className={stage.hasLogo ? 'ok' : 'missing'}>{stage.hasLogo ? 'Logo' : 'No logo'}</span>
         <span>{stage.slotCount} slot{stage.slotCount === 1 ? '' : 's'}</span>
       </div>
+      {canEdit && (
       <label className={`btn-secondary cloud-stage-logo-btn${uploading ? ' disabled' : ''}`}>
         {uploading ? 'Uploading...' : 'Logo'}
         <input
@@ -92,14 +100,17 @@ function CloudStageRow({
           onChange={e => onLogo(stage, e.target.files?.[0])}
         />
       </label>
-      <button className="btn-danger cloud-stage-delete" onClick={() => onDelete(stage)}>
-        Delete
-      </button>
+      )}
+      {canEdit && (
+        <button className="btn-danger cloud-stage-delete" onClick={() => onDelete(stage)}>
+          Delete
+        </button>
+      )}
     </div>
   );
 }
 
-export default function CloudSettings({ eventYearId }: Props) {
+export default function CloudSettings({ eventYearId, canEdit }: Props) {
   const [settings, setSettings] = useState<CloudYearSettings | null>(null);
   const [stages, setStages] = useState<CloudStage[]>([]);
   const [separatorColor, setSeparatorColor] = useState('#E6007E');
@@ -147,6 +158,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   }
 
   async function saveDateRange() {
+    if (!canEdit) return;
     setSavingDates(true);
     setError(null);
     try {
@@ -173,6 +185,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   const isCustom = !SEPARATOR_OPTIONS.slice(0, -1).some(option => option.value === separatorChar);
 
   async function saveNameListSettings() {
+    if (!canEdit) return;
     const finalChar = isCustom && customChar ? customChar : separatorChar;
     setSavingSettings(true);
     setError(null);
@@ -194,6 +207,7 @@ export default function CloudSettings({ eventYearId }: Props) {
 
   async function addStage(e: React.FormEvent) {
     e.preventDefault();
+    if (!canEdit) return;
     const name = newStageName.trim();
     if (!name) return;
     setSavingStages(true);
@@ -210,6 +224,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   }
 
   async function renameStage(stage: CloudStage, name: string) {
+    if (!canEdit) return;
     const nextName = name.trimStart();
     setStages(current => current.map(item => item.id === stage.id ? { ...item, name: nextName } : item));
     if (!nextName.trim()) return;
@@ -226,6 +241,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   }
 
   async function removeStage(stage: CloudStage) {
+    if (!canEdit) return;
     const warning = stage.slotCount > 0
       ? `Delete ${stage.name}? This will also delete ${stage.slotCount} slot${stage.slotCount === 1 ? '' : 's'} assigned to this stage.`
       : `Delete ${stage.name}?`;
@@ -250,6 +266,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   }
 
   async function replaceStageLogo(stage: CloudStage, file?: File) {
+    if (!canEdit) return;
     if (!file) return;
     setUploadingStageId(stage.id);
     setError(null);
@@ -267,6 +284,7 @@ export default function CloudSettings({ eventYearId }: Props) {
   }
 
   async function handleStageDragEnd(event: DragEndEvent) {
+    if (!canEdit) return;
     const { active, over } = event;
     if (!over || active.id === over.id || savingStages) return;
     const oldIndex = stages.findIndex(stage => stage.id === active.id);
@@ -298,7 +316,7 @@ export default function CloudSettings({ eventYearId }: Props) {
         <div className="cloud-settings-section-head">
           <div>
             <h2>Cloud Settings — {settings?.name ?? 'Event Year'}</h2>
-            <p>Shared year settings saved directly to Supabase.</p>
+          <p>{canEdit ? 'Shared year settings saved directly to Supabase.' : 'View-only access for shared year settings.'}</p>
           </div>
           {savingStages && <span className="cloud-settings-saving">Saving stages...</span>}
         </div>
@@ -317,15 +335,15 @@ export default function CloudSettings({ eventYearId }: Props) {
         <div className="cloud-date-range">
           <div className="cloud-settings-field stacked">
             <label>Start date</label>
-            <input type="date" value={rangeStart} onChange={e => setRangeStart(e.target.value)} />
+            <input type="date" value={rangeStart} disabled={!canEdit} onChange={e => setRangeStart(e.target.value)} />
           </div>
           <div className="cloud-settings-field stacked">
             <label>End date</label>
-            <input type="date" value={rangeEnd} onChange={e => setRangeEnd(e.target.value)} />
+            <input type="date" value={rangeEnd} disabled={!canEdit} onChange={e => setRangeEnd(e.target.value)} />
           </div>
-          <button className="btn-primary" onClick={saveDateRange} disabled={savingDates || !rangeStart}>
+          {canEdit && <button className="btn-primary" onClick={saveDateRange} disabled={savingDates || !rangeStart}>
             {savingDates ? 'Saving...' : datesSaved ? 'Saved' : 'Save dates'}
-          </button>
+          </button>}
         </div>
       </section>
 
@@ -346,13 +364,14 @@ export default function CloudSettings({ eventYearId }: Props) {
                   onRename={renameStage}
                   onLogo={replaceStageLogo}
                   onDelete={removeStage}
+                  canEdit={canEdit}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
 
-        <form className="cloud-stage-add" onSubmit={addStage}>
+        {canEdit && <form className="cloud-stage-add" onSubmit={addStage}>
           <input
             value={newStageName}
             placeholder="Stage name"
@@ -361,7 +380,7 @@ export default function CloudSettings({ eventYearId }: Props) {
           <button className="btn-secondary" type="submit" disabled={savingStages || !newStageName.trim()}>
             Add stage
           </button>
-        </form>
+        </form>}
       </section>
 
       <section className="cloud-settings-section">
@@ -370,8 +389,8 @@ export default function CloudSettings({ eventYearId }: Props) {
         <div className="cloud-settings-field">
           <label>Name text color</label>
           <div className="cloud-color-row">
-            <input type="color" value={nameTextColor} onChange={e => setNameTextColor(e.target.value)} />
-            <input value={nameTextColor} onChange={e => setNameTextColor(e.target.value)} />
+            <input type="color" value={nameTextColor} disabled={!canEdit} onChange={e => setNameTextColor(e.target.value)} />
+            <input value={nameTextColor} disabled={!canEdit} onChange={e => setNameTextColor(e.target.value)} />
           </div>
         </div>
 
@@ -379,6 +398,7 @@ export default function CloudSettings({ eventYearId }: Props) {
           <label>Separator between band names</label>
           <select
             value={isCustom ? '__custom__' : separatorChar}
+            disabled={!canEdit}
             onChange={e => {
               if (e.target.value !== '__custom__') setSeparatorChar(e.target.value);
               else setSeparatorChar(customChar || '■');
@@ -393,7 +413,7 @@ export default function CloudSettings({ eventYearId }: Props) {
         {isCustom && (
           <div className="cloud-settings-field">
             <label>Custom separator character</label>
-            <input value={customChar} maxLength={4} onChange={e => {
+            <input value={customChar} maxLength={4} disabled={!canEdit} onChange={e => {
               setCustomChar(e.target.value);
               setSeparatorChar(e.target.value);
             }} />
@@ -403,8 +423,8 @@ export default function CloudSettings({ eventYearId }: Props) {
         <div className="cloud-settings-field">
           <label>Separator color</label>
           <div className="cloud-color-row">
-            <input type="color" value={separatorColor} onChange={e => setSeparatorColor(e.target.value)} />
-            <input value={separatorColor} onChange={e => setSeparatorColor(e.target.value)} />
+            <input type="color" value={separatorColor} disabled={!canEdit} onChange={e => setSeparatorColor(e.target.value)} />
+            <input value={separatorColor} disabled={!canEdit} onChange={e => setSeparatorColor(e.target.value)} />
           </div>
         </div>
 
@@ -416,9 +436,9 @@ export default function CloudSettings({ eventYearId }: Props) {
           <span style={{ color: nameTextColor }}>BAND THREE</span>
         </div>
 
-        <button className="btn-primary" onClick={saveNameListSettings} disabled={savingSettings}>
+        {canEdit && <button className="btn-primary" onClick={saveNameListSettings} disabled={savingSettings}>
           {savingSettings ? 'Saving...' : saved ? 'Saved' : 'Save settings'}
-        </button>
+        </button>}
       </section>
     </div>
   );
