@@ -81,7 +81,7 @@ export default function SupabaseStatus() {
         <h3>Cloud database</h3>
         <p>
           Supabase is the shared workspace for cloud editing across signed-in clients.
-          Local IndexedDB tools are kept below as a backup and legacy workspace.
+          Local IndexedDB tools are kept below only for JSON backup/import and emergency local access.
         </p>
       </div>
 

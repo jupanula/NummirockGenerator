@@ -150,8 +150,6 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 12px;
-  max-height: calc(100vh - 150px);
-  overflow: auto;
 }
 
 .cloud-schedule-sidebar h3 {
@@ -245,7 +243,7 @@
 
 .cloud-schedule-board {
   min-width: 0;
-  overflow: auto;
+  overflow: visible;
 }
 
 .cloud-schedule-empty {
@@ -267,18 +265,22 @@
 }
 
 .cloud-calendar-day-title {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  place-items: center;
+  gap: 3px;
   margin-bottom: 10px;
-  padding: 0 2px;
+  padding: 10px 12px 8px;
+  background: linear-gradient(180deg, var(--bg-primary) 0%, rgba(0, 0, 0, 0.94) 100%);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
 }
 
 .cloud-calendar-day-title h3 {
   margin: 0;
-  font-size: 15px;
-  color: var(--text-primary);
+  color: var(--accent);
+  font-family: NummirockFont, sans-serif;
+  font-size: 32px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -291,15 +293,34 @@
   min-width: 760px;
 }
 
+.cloud-calendar-sticky {
+  position: sticky;
+  top: -24px;
+  z-index: 40;
+  background: var(--bg-primary);
+  padding-top: 24px;
+}
+
 .cloud-calendar-header {
   display: grid;
   gap: 10px;
   margin-bottom: 10px;
-  position: sticky;
-  top: 0;
-  z-index: 20;
   background: var(--bg-primary);
-  padding-bottom: 10px;
+  padding: 8px 0 10px;
+}
+
+.cloud-schedule-bottom-loading {
+  align-items: center;
+  background: rgba(230, 0, 126, 0.12);
+  border: 1px solid rgba(230, 0, 126, 0.35);
+  border-radius: 6px;
+  color: var(--text-primary);
+  display: flex;
+  font-size: 13px;
+  gap: 10px;
+  justify-content: center;
+  min-width: 820px;
+  padding: 14px;
 }
 
 .cloud-time-axis-spacer {
@@ -330,7 +351,7 @@
 .cloud-calendar-stage-title img {
   display: block;
   width: auto;
-  max-width: 50%;
+  max-width: 40%;
   max-height: 72px;
   object-fit: contain;
 }

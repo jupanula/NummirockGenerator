@@ -6,8 +6,6 @@ import {
   getCloudEventYears,
   type CloudEventYearSummary,
 } from '../supabase/eventYears';
-import CloudBandList from './CloudBandList';
-import CloudScheduleSummary from './CloudScheduleSummary';
 import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
 import './CloudEventYearList.css';
 
@@ -17,8 +15,6 @@ interface Props {
 
 export default function CloudEventYearList({ onOpenYear }: Props) {
   const [years, setYears] = useState<CloudEventYearSummary[]>([]);
-  const [openYearId, setOpenYearId] = useState<string | null>(null);
-  const [openScheduleYearId, setOpenScheduleYearId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -82,8 +78,6 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
     try {
       await deleteCloudEventYear(yearItem.id);
       setYears(current => current.filter(y => y.id !== yearItem.id));
-      if (openYearId === yearItem.id) setOpenYearId(null);
-      if (openScheduleYearId === yearItem.id) setOpenScheduleYearId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not delete cloud event year.');
     } finally {
@@ -170,18 +164,6 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
                 >
                   Open workspace
                 </button>
-                <button
-                  className="btn-secondary cloud-year-toggle"
-                  onClick={() => setOpenYearId(current => current === year.id ? null : year.id)}
-                >
-                  {openYearId === year.id ? 'Hide bands' : 'Show bands'}
-                </button>
-                <button
-                  className="btn-secondary cloud-year-toggle"
-                  onClick={() => setOpenScheduleYearId(current => current === year.id ? null : year.id)}
-                >
-                  {openScheduleYearId === year.id ? 'Hide schedule' : 'Show schedule'}
-                </button>
                 {canEdit && (
                   <button
                     className="btn-danger cloud-year-delete"
@@ -199,8 +181,6 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
               <span>{year.slots} slots</span>
               <span>{year.autoDesigns} auto-designs</span>
             </div>
-            {openYearId === year.id && <CloudBandList eventYearId={year.id} canEdit={canEdit} />}
-            {openScheduleYearId === year.id && <CloudScheduleSummary eventYearId={year.id} canEdit={canEdit} />}
           </div>
         ))}
       </div>

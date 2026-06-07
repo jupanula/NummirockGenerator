@@ -99,6 +99,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   const [exporting, setExporting] = useState<ExportKind | null>(null);
   const [newActName, setNewActName] = useState('');
   const [newActType, setNewActType] = useState<ScheduleActType>('activity');
+  const [visibleDayCount, setVisibleDayCount] = useState(0);
 
   async function loadSchedule(cancelled?: () => boolean) {
     setLoading(true);
@@ -134,6 +135,37 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       cancelled = true;
     };
   }, [eventYearId]);
+
+  useEffect(() => {
+    if (days.length === 0) {
+      setVisibleDayCount(0);
+      return;
+    }
+
+    setVisibleDayCount(1);
+    if (days.length === 1) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const revealNextDay = () => {
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setVisibleDayCount(current => {
+          const next = Math.min(days.length, current + 1);
+          if (next < days.length) revealNextDay();
+          return next;
+        });
+      }, 90);
+    };
+
+    revealNextDay();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [eventYearId, days.length]);
 
   const stats = useMemo(() => {
     const hidden = slots.filter(slot => slot.visibility === 'hidden').length;
@@ -488,6 +520,8 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
   const missingSetup = days.length === 0 || stages.length === 0;
   const draftSlot = draft?.slotId ? slots.find(slot => slot.id === draft.slotId) : undefined;
   const draftHasAssignment = Boolean(draftSlot?.bandId || draftSlot?.actId);
+  const visibleDays = days.slice(0, visibleDayCount > 0 ? visibleDayCount : Math.min(days.length, 1));
+  const revealingDays = visibleDayCount > 0 && visibleDayCount < days.length;
 
   return (
     <div className="cloud-schedule">
@@ -594,27 +628,29 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
             </div>
           ) : (
             <div className="cloud-calendar-days">
-              {days.map(day => {
+              {visibleDays.map(day => {
                 const daySlots = slots
                   .filter(slot => slot.dayId === day.id)
                   .sort((a, b) => a.sortMinutes - b.sortMinutes || a.stageOrder - b.stageOrder);
 
                 return (
                   <section className="cloud-calendar-day" key={day.id}>
-                    <div className="cloud-calendar-day-title">
-                      <h3>{day.label}</h3>
-                      <span>{daySlots.length} slot{daySlots.length === 1 ? '' : 's'}</span>
-                    </div>
-
                     <div className="cloud-calendar-wrap">
-                      <div
-                        className="cloud-calendar-header"
-                        style={{ gridTemplateColumns: `72px repeat(${Math.max(1, stages.length)}, minmax(240px, 1fr))` }}
-                      >
-                        <div className="cloud-time-axis-spacer" />
-                        {stages.map(stage => (
-                          <StageHeader key={stage.id} stage={stage} />
-                        ))}
+                      <div className="cloud-calendar-sticky">
+                        <div className="cloud-calendar-day-title">
+                          <h3>{day.label}</h3>
+                          <span>{daySlots.length} slot{daySlots.length === 1 ? '' : 's'}</span>
+                        </div>
+
+                        <div
+                          className="cloud-calendar-header"
+                          style={{ gridTemplateColumns: `72px repeat(${Math.max(1, stages.length)}, minmax(240px, 1fr))` }}
+                        >
+                          <div className="cloud-time-axis-spacer" />
+                          {stages.map(stage => (
+                            <StageHeader key={stage.id} stage={stage} />
+                          ))}
+                        </div>
                       </div>
 
                       <div
@@ -700,6 +736,12 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
                   </section>
                 );
               })}
+              {(revealingDays || (loading && slots.length > 0)) && (
+                <div className="cloud-schedule-bottom-loading">
+                  <span className="cloud-export-spinner" />
+                  <span>{revealingDays ? 'Loading remaining days...' : 'Refreshing schedule...'}</span>
+                </div>
+              )}
             </div>
           )}
         </main>
