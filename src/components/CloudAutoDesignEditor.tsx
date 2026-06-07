@@ -273,13 +273,19 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, canEdit, 
     <div className="ade-page">
       <header className="ade-header">
         <button className="btn-ghost" onClick={onBack}>← Back</button>
-        <input
-          className="ade-name-input"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Design name"
-          disabled={!canEdit}
-        />
+        {canEdit ? (
+          <input
+            className="ade-name-input"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Design name"
+          />
+        ) : (
+          <div className="ade-name-readonly">
+            <span>Design</span>
+            <strong>{name}</strong>
+          </div>
+        )}
         <div className="ade-header-actions">
           <div className="ade-scale-group">
             {([1, 2, 4] as const).map(s => (
@@ -309,79 +315,79 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, canEdit, 
       {error && <div className="cloud-schedule-error">{error}</div>}
 
       <div className="ade-body">
-        <aside className="ade-controls">
-          <div className="ade-group">
-            <div className="ade-group-title">Canvas</div>
-            <div className="ade-field">
-              <label>Aspect ratio — <strong>{arLabel(aspectRatio)}</strong></label>
-              <input
-                type="range"
-                min={0.25}
-                max={4}
-                step={0.01}
-                value={aspectRatio}
-                disabled={!canEdit}
-                onChange={e => setAspectRatio(Number(e.target.value))}
-              />
-              <div className="ade-field-hint">{CW} × {CH} px</div>
-            </div>
-          </div>
-
-          <div className="ade-group">
-            <div className="ade-group-title">Bands</div>
-            <label className="ade-checkbox">
-              <input
-                type="checkbox"
-                checked={includeHiddenBands}
-                disabled={!canEdit}
-                onChange={e => setIncludeHiddenBands(e.target.checked)}
-              />
-              Include hidden bands
-            </label>
-            {hiddenBandsCount > 0 && (
-              <div className="ade-field-hint">
-                {hiddenBandsCount} hidden band{hiddenBandsCount === 1 ? '' : 's'} {includeHiddenBands ? 'included' : 'excluded'}
+        {canEdit && (
+          <aside className="ade-controls">
+            <div className="ade-group">
+              <div className="ade-group-title">Canvas</div>
+              <div className="ade-field">
+                <label>Aspect ratio — <strong>{arLabel(aspectRatio)}</strong></label>
+                <input
+                  type="range"
+                  min={0.25}
+                  max={4}
+                  step={0.01}
+                  value={aspectRatio}
+                  onChange={e => setAspectRatio(Number(e.target.value))}
+                />
+                <div className="ade-field-hint">{CW} × {CH} px</div>
               </div>
-            )}
-            <SliderField disabled={!canEdit} label="Total bands shown" value={totalBands} min={0} max={maxBands} onChange={handleTotalBands} />
-            <SliderField disabled={!canEdit} label={`Photo+Logo (first ${photoBandCount})`} value={photoBandCount} min={0} max={totalBands} onChange={handlePhotoBandCount} />
-            <SliderField disabled={!canEdit} label={`Logo only (next ${logoBandCount})`} value={logoBandCount} min={0} max={totalBands - photoBandCount} onChange={handleLogoBandCount} />
-            <div className="ade-band-summary">
-              <span className="ade-band-chip photo">Photos: {photoBandCount}</span>
-              <span className="ade-band-chip logo">Logos: {logoBandCount}</span>
-              <span className="ade-band-chip names">Names: {nameBandCount}</span>
             </div>
-          </div>
 
-          {photoBandCount > 0 && (
-            <Section title="Photo + Logo">
-              <SliderField disabled={!canEdit} label="First row bands" value={photoFirstRow} min={1} max={Math.max(1, photoBandCount)} onChange={setPhotoFirstRow} />
-              <SliderField disabled={!canEdit} label="Gap between bands" value={photoHGap} min={0} max={60} onChange={setPhotoHGap} />
-              <SliderField disabled={!canEdit} label="Gap between rows" value={photoRowGap} min={-200} max={0} onChange={setPhotoRowGap} />
-              <SliderField disabled={!canEdit} label="Gap below section" value={photoGapBelow} min={-80} max={80} onChange={setPhotoGapBelow} />
-            </Section>
-          )}
+            <div className="ade-group">
+              <div className="ade-group-title">Bands</div>
+              <label className="ade-checkbox">
+                <input
+                  type="checkbox"
+                  checked={includeHiddenBands}
+                  onChange={e => setIncludeHiddenBands(e.target.checked)}
+                />
+                Include hidden bands
+              </label>
+              {hiddenBandsCount > 0 && (
+                <div className="ade-field-hint">
+                  {hiddenBandsCount} hidden band{hiddenBandsCount === 1 ? '' : 's'} {includeHiddenBands ? 'included' : 'excluded'}
+                </div>
+              )}
+              <SliderField label="Total bands shown" value={totalBands} min={0} max={maxBands} onChange={handleTotalBands} />
+              <SliderField label={`Photo+Logo (first ${photoBandCount})`} value={photoBandCount} min={0} max={totalBands} onChange={handlePhotoBandCount} />
+              <SliderField label={`Logo only (next ${logoBandCount})`} value={logoBandCount} min={0} max={totalBands - photoBandCount} onChange={handleLogoBandCount} />
+              <div className="ade-band-summary">
+                <span className="ade-band-chip photo">Photos: {photoBandCount}</span>
+                <span className="ade-band-chip logo">Logos: {logoBandCount}</span>
+                <span className="ade-band-chip names">Names: {nameBandCount}</span>
+              </div>
+            </div>
 
-          {logoBandCount > 0 && (
-            <Section title="Logo only">
-              <SliderField disabled={!canEdit} label="Bands on first row" value={logoFirstRow} min={0} max={Math.max(1, logoBandCount)} onChange={setLogoFirstRow} />
-              <SliderField disabled={!canEdit} label="Normalisation" value={logoNorm} min={0} max={100} onChange={setLogoNorm} />
-              <SliderField disabled={!canEdit} label="Gap between logos" value={logoHGap} min={0} max={80} onChange={setLogoHGap} />
-              <SliderField disabled={!canEdit} label="Gap between rows %" value={logoRowGap} min={-30} max={60} onChange={setLogoRowGap} />
-              <SliderField disabled={!canEdit} label="Gap below section" value={logoGapBelow} min={-40} max={120} onChange={setLogoGapBelow} />
-            </Section>
-          )}
+            {photoBandCount > 0 && (
+              <Section title="Photo + Logo">
+                <SliderField label="First row bands" value={photoFirstRow} min={1} max={Math.max(1, photoBandCount)} onChange={setPhotoFirstRow} />
+                <SliderField label="Gap between bands" value={photoHGap} min={0} max={60} onChange={setPhotoHGap} />
+                <SliderField label="Gap between rows" value={photoRowGap} min={-200} max={0} onChange={setPhotoRowGap} />
+                <SliderField label="Gap below section" value={photoGapBelow} min={-80} max={80} onChange={setPhotoGapBelow} />
+              </Section>
+            )}
 
-          {nameBandCount > 0 && (
-            <Section title="Names">
-              <SliderField disabled={!canEdit} label="Bands per row" value={nameFirstRow} min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
-              <SliderField disabled={!canEdit} label="Font size %" value={nameFontScale} min={50} max={200} onChange={setNameFontScale} />
-              <SliderField disabled={!canEdit} label="Width normalisation" value={nameNorm} min={0} max={100} onChange={setNameNorm} />
-              <SliderField disabled={!canEdit} label="Gap between names" value={nameHGap} min={0} max={200} onChange={setNameHGap} />
-              <SliderField disabled={!canEdit} label="Gap between rows" value={nameRowGap} min={-100} max={0} onChange={setNameRowGap} />
-            </Section>
-          )}
-        </aside>
+            {logoBandCount > 0 && (
+              <Section title="Logo only">
+                <SliderField label="Bands on first row" value={logoFirstRow} min={0} max={Math.max(1, logoBandCount)} onChange={setLogoFirstRow} />
+                <SliderField label="Normalisation" value={logoNorm} min={0} max={100} onChange={setLogoNorm} />
+                <SliderField label="Gap between logos" value={logoHGap} min={0} max={80} onChange={setLogoHGap} />
+                <SliderField label="Gap between rows %" value={logoRowGap} min={-30} max={60} onChange={setLogoRowGap} />
+                <SliderField label="Gap below section" value={logoGapBelow} min={-40} max={120} onChange={setLogoGapBelow} />
+              </Section>
+            )}
+
+            {nameBandCount > 0 && (
+              <Section title="Names">
+                <SliderField label="Bands per row" value={nameFirstRow} min={0} max={Math.max(1, nameBandCount)} onChange={setNameFirstRow} />
+                <SliderField label="Font size %" value={nameFontScale} min={50} max={200} onChange={setNameFontScale} />
+                <SliderField label="Width normalisation" value={nameNorm} min={0} max={100} onChange={setNameNorm} />
+                <SliderField label="Gap between names" value={nameHGap} min={0} max={200} onChange={setNameHGap} />
+                <SliderField label="Gap between rows" value={nameRowGap} min={-100} max={0} onChange={setNameRowGap} />
+              </Section>
+            )}
+          </aside>
+        )}
 
         <div className="ade-preview-wrap">
           <div className="ade-preview-inner">
