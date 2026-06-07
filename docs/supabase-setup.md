@@ -44,7 +44,15 @@ This creates:
 - asset metadata
 - generated export metadata
 - changelog
-- first Row Level Security policies
+- role-based Row Level Security policies
+
+The role policies are safe to run again. They enforce this app model:
+
+- `owner`: full access, including years, settings, stages, designs, bands, schedules, assets and deletion.
+- `editor`: can manage bands, band assets, schedule slots and other schedule acts. Can view/export designs but cannot create, edit or delete designs. Cannot edit year settings, stages or event dates.
+- `viewer`: can read years, bands, designs and schedules, and can export. Cannot create, edit or delete app data.
+
+User creation still happens in Supabase Auth. Access is granted by adding the user to `workspace_members` with one of these roles.
 
 ## 4. Create Storage Bucket
 

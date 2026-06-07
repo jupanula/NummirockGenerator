@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { CloudTab, NavState } from '../types';
 import { supabase } from '../supabase/client';
-import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
+import { getCurrentWorkspaceMembership, getWorkspacePermissions, type WorkspaceMembership } from '../supabase/workspace';
 import CloudAutoDesignEditor from './CloudAutoDesignEditor';
 import CloudAutoDesignList from './CloudAutoDesignList';
 import CloudBandList from './CloudBandList';
@@ -29,7 +29,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
   const [session, setSession] = useState<Session | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const canEdit = canEditWorkspace(membership);
+  const permissions = getWorkspacePermissions(membership);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,19 +58,21 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
     onNavigate({ view: 'home' });
   }
 
-  const tabs: { id: CloudTab; label: string }[] = [
+  const tabs = ([
     { id: 'bands', label: 'Bands' },
     { id: 'designs', label: 'Designs' },
     { id: 'scheduler', label: 'Scheduler' },
-    { id: 'settings', label: 'Settings' },
-  ];
+    { id: 'settings', label: 'Settings', visible: permissions.canManageSettings },
+  ] satisfies { id: CloudTab; label: string; visible?: boolean }[]).filter(tab => tab.visible !== false);
+
+  const activeTab = tab === 'settings' && !permissions.canManageSettings ? 'bands' : tab;
 
   if (tab === 'designs' && editingDesign) {
     return (
       <CloudAutoDesignEditor
         eventYearId={yearId}
         designId={editingDesignId}
-        canEdit={canEdit}
+        canEdit={permissions.canManageDesigns}
         onBack={() => {
           setEditingDesign(false);
           setEditingDesignId(undefined);
@@ -94,7 +96,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
           {tabs.map(t => (
             <button
               key={t.id}
-              className={`workspace-tab ${tab === t.id ? 'active' : ''}`}
+              className={`workspace-tab ${activeTab === t.id ? 'active' : ''}`}
               onClick={() => {
                 setEditingDesign(false);
                 setEditingDesignId(undefined);
@@ -121,19 +123,19 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
       </header>
 
       <main className="workspace-content cloud-workspace-content">
-        {tab === 'bands' && <CloudBandList eventYearId={yearId} canEdit={canEdit} />}
-        {tab === 'designs' && (
+        {activeTab === 'bands' && <CloudBandList eventYearId={yearId} canEdit={permissions.canManageBands} />}
+        {activeTab === 'designs' && (
           <CloudAutoDesignList
             eventYearId={yearId}
-            canEdit={canEdit}
+            canEdit={permissions.canManageDesigns}
             onOpenEditor={designId => {
               setEditingDesignId(designId);
               setEditingDesign(true);
             }}
           />
         )}
-        {tab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} canEdit={canEdit} />}
-        {tab === 'settings' && <CloudSettings eventYearId={yearId} canEdit={canEdit} />}
+        {activeTab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} canEdit={permissions.canManageSchedule} />}
+        {activeTab === 'settings' && permissions.canManageSettings && <CloudSettings eventYearId={yearId} canEdit={permissions.canManageSettings} />}
       </main>
 
       {accountOpen && session && (

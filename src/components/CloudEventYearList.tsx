@@ -5,7 +5,7 @@ import {
   getCloudEventYears,
   type CloudEventYearSummary,
 } from '../supabase/eventYears';
-import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
+import { getCurrentWorkspaceMembership, getWorkspacePermissions, type WorkspaceMembership } from '../supabase/workspace';
 import './CloudEventYearList.css';
 
 interface Props {
@@ -22,7 +22,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
 
-  const canEdit = canEditWorkspace(membership);
+  const permissions = getWorkspacePermissions(membership);
 
   async function loadYears() {
     if (!supabaseConfigured) return;
@@ -73,12 +73,12 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
         <div>
           <h2>Event Years</h2>
           <p>
-            Shared Supabase data. {canEdit
+            Shared Supabase data. {permissions.canManageYears
               ? 'Changes here sync across signed-in clients.'
               : 'You have view-only access in this workspace.'}
           </p>
         </div>
-        {canEdit && (
+        {permissions.canManageYears && (
           <button className="btn-primary" onClick={() => setShowForm(true)}>
             + New Year
           </button>
@@ -87,7 +87,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
 
       {error && <div className="cloud-years-error">{error}</div>}
 
-      {showForm && canEdit && (
+      {showForm && permissions.canManageYears && (
         <form className="cloud-year-form" onSubmit={handleCreate}>
           <h3>Create Event Year</h3>
           <div className="cloud-year-form-grid">

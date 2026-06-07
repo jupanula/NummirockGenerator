@@ -6,8 +6,29 @@ export interface WorkspaceMembership {
   role: 'owner' | 'editor' | 'viewer';
 }
 
+export interface WorkspacePermissions {
+  canManageYears: boolean;
+  canManageSettings: boolean;
+  canManageBands: boolean;
+  canManageSchedule: boolean;
+  canManageDesigns: boolean;
+  canExport: boolean;
+}
+
 export function canEditWorkspace(membership: WorkspaceMembership | null): boolean {
   return membership?.role === 'owner' || membership?.role === 'editor';
+}
+
+export function getWorkspacePermissions(membership: WorkspaceMembership | null): WorkspacePermissions {
+  const role = membership?.role;
+  return {
+    canManageYears: role === 'owner',
+    canManageSettings: role === 'owner',
+    canManageBands: role === 'owner' || role === 'editor',
+    canManageSchedule: role === 'owner' || role === 'editor',
+    canManageDesigns: role === 'owner',
+    canExport: Boolean(role),
+  };
 }
 
 interface MembershipRow {

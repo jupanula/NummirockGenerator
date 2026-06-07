@@ -291,57 +291,190 @@ as $$
   );
 $$;
 
+create or replace function public.has_workspace_role(target_workspace_id uuid, allowed_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.workspace_members wm
+    where wm.workspace_id = target_workspace_id
+      and wm.user_id = auth.uid()
+      and wm.role = any(allowed_roles)
+  );
+$$;
+
+create or replace function public.has_event_year_role(target_event_year_id uuid, allowed_roles text[])
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.event_years ey
+    join public.workspace_members wm on wm.workspace_id = ey.workspace_id
+    where ey.id = target_event_year_id
+      and wm.user_id = auth.uid()
+      and wm.role = any(allowed_roles)
+  );
+$$;
+
+drop policy if exists "workspace members read workspaces" on public.workspaces;
+drop policy if exists "workspace members read memberships" on public.workspace_members;
+drop policy if exists "workspace members manage event years" on public.event_years;
+drop policy if exists "event members manage days" on public.event_days;
+drop policy if exists "event members manage stages" on public.stages;
+drop policy if exists "event members manage bands" on public.bands;
+drop policy if exists "event members manage schedule acts" on public.schedule_acts;
+drop policy if exists "event members manage slots" on public.performance_slots;
+drop policy if exists "event members manage auto designs" on public.auto_designs;
+drop policy if exists "event members manage assets" on public.asset_files;
+drop policy if exists "event members manage exports" on public.generated_exports;
+drop policy if exists "event members read changelog" on public.change_log;
+drop policy if exists "workspace members read event years" on public.event_years;
+drop policy if exists "owners create event years" on public.event_years;
+drop policy if exists "owners update event years" on public.event_years;
+drop policy if exists "owners delete event years" on public.event_years;
+drop policy if exists "event members read days" on public.event_days;
+drop policy if exists "owners manage days" on public.event_days;
+drop policy if exists "event members read stages" on public.stages;
+drop policy if exists "owners manage stages" on public.stages;
+drop policy if exists "event members read bands" on public.bands;
+drop policy if exists "owners and editors manage bands" on public.bands;
+drop policy if exists "event members read schedule acts" on public.schedule_acts;
+drop policy if exists "owners and editors manage schedule acts" on public.schedule_acts;
+drop policy if exists "event members read slots" on public.performance_slots;
+drop policy if exists "owners and editors manage slots" on public.performance_slots;
+drop policy if exists "event members read auto designs" on public.auto_designs;
+drop policy if exists "owners manage auto designs" on public.auto_designs;
+drop policy if exists "event members read assets" on public.asset_files;
+drop policy if exists "owners manage all asset records" on public.asset_files;
+drop policy if exists "editors manage band asset records" on public.asset_files;
+drop policy if exists "event members read exports" on public.generated_exports;
+drop policy if exists "event members create exports" on public.generated_exports;
+
 create policy "workspace members read workspaces"
 on public.workspaces for select
 using (public.is_workspace_member(id));
 
 create policy "workspace members read memberships"
 on public.workspace_members for select
-using (public.is_workspace_member(workspace_id));
+using (
+  user_id = auth.uid()
+  or public.has_workspace_role(workspace_id, array['owner'])
+);
 
-create policy "workspace members manage event years"
-on public.event_years for all
+create policy "workspace members read event years"
+on public.event_years for select
 using (public.is_workspace_member(workspace_id))
-with check (public.is_workspace_member(workspace_id));
+;
 
-create policy "event members manage days"
+create policy "owners create event years"
+on public.event_years for insert
+with check (public.has_workspace_role(workspace_id, array['owner']));
+
+create policy "owners update event years"
+on public.event_years for update
+using (public.has_workspace_role(workspace_id, array['owner']))
+with check (public.has_workspace_role(workspace_id, array['owner']));
+
+create policy "owners delete event years"
+on public.event_years for delete
+using (public.has_workspace_role(workspace_id, array['owner']));
+
+create policy "event members read days"
+on public.event_days for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners manage days"
 on public.event_days for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner']))
+with check (public.has_event_year_role(event_year_id, array['owner']));
 
-create policy "event members manage stages"
+create policy "event members read stages"
+on public.stages for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners manage stages"
 on public.stages for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner']))
+with check (public.has_event_year_role(event_year_id, array['owner']));
 
-create policy "event members manage bands"
+create policy "event members read bands"
+on public.bands for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners and editors manage bands"
 on public.bands for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner', 'editor']))
+with check (public.has_event_year_role(event_year_id, array['owner', 'editor']));
 
-create policy "event members manage schedule acts"
+create policy "event members read schedule acts"
+on public.schedule_acts for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners and editors manage schedule acts"
 on public.schedule_acts for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner', 'editor']))
+with check (public.has_event_year_role(event_year_id, array['owner', 'editor']));
 
-create policy "event members manage slots"
+create policy "event members read slots"
+on public.performance_slots for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners and editors manage slots"
 on public.performance_slots for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner', 'editor']))
+with check (public.has_event_year_role(event_year_id, array['owner', 'editor']));
 
-create policy "event members manage auto designs"
+create policy "event members read auto designs"
+on public.auto_designs for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners manage auto designs"
 on public.auto_designs for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner']))
+with check (public.has_event_year_role(event_year_id, array['owner']));
 
-create policy "event members manage assets"
+create policy "event members read assets"
+on public.asset_files for select
+using (public.is_event_year_member(event_year_id))
+;
+
+create policy "owners manage all asset records"
 on public.asset_files for all
-using (public.is_event_year_member(event_year_id))
-with check (public.is_event_year_member(event_year_id));
+using (public.has_event_year_role(event_year_id, array['owner']))
+with check (public.has_event_year_role(event_year_id, array['owner']));
 
-create policy "event members manage exports"
-on public.generated_exports for all
+create policy "editors manage band asset records"
+on public.asset_files for all
+using (
+  owner_table = 'bands'
+  and public.has_event_year_role(event_year_id, array['editor'])
+)
+with check (
+  owner_table = 'bands'
+  and public.has_event_year_role(event_year_id, array['editor'])
+);
+
+create policy "event members read exports"
+on public.generated_exports for select
 using (public.is_event_year_member(event_year_id))
+;
+
+create policy "event members create exports"
+on public.generated_exports for insert
 with check (public.is_event_year_member(event_year_id));
 
 create policy "event members read changelog"
@@ -373,10 +506,17 @@ grant select on table public.change_log to authenticated;
 
 grant execute on function public.is_workspace_member(uuid) to authenticated;
 grant execute on function public.is_event_year_member(uuid) to authenticated;
+grant execute on function public.has_workspace_role(uuid, text[]) to authenticated;
+grant execute on function public.has_event_year_role(uuid, text[]) to authenticated;
 
 -- Private Storage bucket policies for client-side uploads/downloads.
 -- Objects are scoped by the first path segment:
 -- event-years/{event_year_id}/...
+
+drop policy if exists "event members read assets" on storage.objects;
+drop policy if exists "event members upload assets" on storage.objects;
+drop policy if exists "event members update assets" on storage.objects;
+drop policy if exists "event members delete assets" on storage.objects;
 
 create policy "event members read assets"
 on storage.objects for select
@@ -393,7 +533,13 @@ to authenticated
 with check (
   bucket_id = 'nummirock-assets'
   and (storage.foldername(name))[1] = 'event-years'
-  and public.is_event_year_member(((storage.foldername(name))[2])::uuid)
+  and (
+    public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['owner'])
+    or (
+      (storage.foldername(name))[3] = 'bands'
+      and public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['editor'])
+    )
+  )
 );
 
 create policy "event members update assets"
@@ -402,12 +548,24 @@ to authenticated
 using (
   bucket_id = 'nummirock-assets'
   and (storage.foldername(name))[1] = 'event-years'
-  and public.is_event_year_member(((storage.foldername(name))[2])::uuid)
+  and (
+    public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['owner'])
+    or (
+      (storage.foldername(name))[3] = 'bands'
+      and public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['editor'])
+    )
+  )
 )
 with check (
   bucket_id = 'nummirock-assets'
   and (storage.foldername(name))[1] = 'event-years'
-  and public.is_event_year_member(((storage.foldername(name))[2])::uuid)
+  and (
+    public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['owner'])
+    or (
+      (storage.foldername(name))[3] = 'bands'
+      and public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['editor'])
+    )
+  )
 );
 
 create policy "event members delete assets"
@@ -416,5 +574,11 @@ to authenticated
 using (
   bucket_id = 'nummirock-assets'
   and (storage.foldername(name))[1] = 'event-years'
-  and public.is_event_year_member(((storage.foldername(name))[2])::uuid)
+  and (
+    public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['owner'])
+    or (
+      (storage.foldername(name))[3] = 'bands'
+      and public.has_event_year_role(((storage.foldername(name))[2])::uuid, array['editor'])
+    )
+  )
 );
