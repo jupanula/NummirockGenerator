@@ -19,6 +19,7 @@ import {
   getCloudEventYears,
   type CloudEventYearSummary,
 } from '../supabase/eventYears';
+import { formatSupabaseError } from '../supabase/client';
 import {
   createCloudStage,
   deleteCloudStage,
@@ -182,7 +183,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       setDatesSaved(true);
       setTimeout(() => setDatesSaved(false), 1800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save event dates.');
+      setError(formatSupabaseError(err, 'Could not save event dates.'));
     } finally {
       setSavingDates(false);
     }
@@ -209,7 +210,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save settings.');
+      setError(formatSupabaseError(err, 'Could not save settings.'));
     } finally {
       setSavingSettings(false);
     }
@@ -233,7 +234,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       setNewStageName('');
       setNewStageLogo(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add stage.');
+      setError(formatSupabaseError(err, 'Could not add stage.'));
     } finally {
       setSavingStages(false);
     }
@@ -249,7 +250,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
     try {
       await updateCloudStageName(stage.id, nextName);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not rename stage.');
+      setError(formatSupabaseError(err, 'Could not rename stage.'));
       setStages(current => current.map(item => item.id === stage.id ? stage : item));
     } finally {
       setSavingStages(false);
@@ -275,7 +276,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       await updateCloudStageOrder(next.map(item => item.id));
     } catch (err) {
       setStages(previous);
-      setError(err instanceof Error ? err.message : 'Could not delete stage.');
+      setError(formatSupabaseError(err, 'Could not delete stage.'));
     } finally {
       setSavingStages(false);
     }
@@ -293,7 +294,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
         : item
       ));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not upload stage logo.');
+      setError(formatSupabaseError(err, 'Could not upload stage logo.'));
     } finally {
       setUploadingStageId(null);
     }
@@ -316,7 +317,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       await updateCloudStageOrder(next.map(stage => stage.id));
     } catch (err) {
       setStages(previous);
-      setError(err instanceof Error ? err.message : 'Could not save stage order.');
+      setError(formatSupabaseError(err, 'Could not save stage order.'));
     } finally {
       setSavingStages(false);
     }
@@ -341,7 +342,7 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
       await deleteCloudEventYear(eventYearId);
       window.location.reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete event year.');
+      setError(formatSupabaseError(err, 'Could not delete event year.'));
       setDeletingYear(false);
     }
   }

@@ -34,7 +34,18 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
   const [password, setPassword] = useState('');
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [needsPasswordUpdate, setNeedsPasswordUpdate] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [passwordUpdateMessage, setPasswordUpdateMessage] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  function appRedirectUrl() {
+    return `${window.location.origin}${window.location.pathname}`;
+  }
 
   async function loadMembership() {
     if (!supabase) return;
@@ -51,13 +62,22 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
     if (!supabase) return;
     let mounted = true;
 
+    if (window.location.hash.includes('type=recovery') || window.location.hash.includes('type=invite')) {
+      setNeedsPasswordUpdate(true);
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
       setSession(data.session);
       if (data.session) void loadMembership();
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setNeedsPasswordUpdate(true);
+        setShowRecovery(false);
+        setRecoveryMessage(null);
+      }
       setSession(nextSession);
       setMembership(null);
       setMembershipError(null);
@@ -87,6 +107,51 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
       setPassword('');
       setAuthMessage(null);
     }
+  }
+
+  async function handleSendRecovery(event: React.FormEvent) {
+    event.preventDefault();
+    if (!supabase || !recoveryEmail.trim()) return;
+    setAuthBusy(true);
+    setRecoveryMessage(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail.trim(), {
+      redirectTo: appRedirectUrl(),
+    });
+    setAuthBusy(false);
+    setRecoveryMessage(
+      error
+        ? error.message
+        : 'If that email has access, a password reset link has been sent.'
+    );
+  }
+
+  async function handleUpdatePassword(event: React.FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+
+    setPasswordUpdateMessage(null);
+    if (newPassword.length < 8) {
+      setPasswordUpdateMessage('Use at least 8 characters.');
+      return;
+    }
+    if (newPassword !== newPasswordConfirm) {
+      setPasswordUpdateMessage('The passwords do not match.');
+      return;
+    }
+
+    setAuthBusy(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setAuthBusy(false);
+
+    if (error) {
+      setPasswordUpdateMessage(error.message);
+      return;
+    }
+
+    setNewPassword('');
+    setNewPasswordConfirm('');
+    setNeedsPasswordUpdate(false);
+    setPasswordUpdateMessage('Password updated. You can now use email and password to sign in.');
   }
 
   async function handleSignOut() {
@@ -170,32 +235,105 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
       </header>
 
       <main className="year-list-main">
-        {supabaseStatus.configured && session && <CloudEventYearList onOpenYear={onOpenCloudYear} />}
-
-        {supabaseStatus.configured && !session && (
+        {supabaseStatus.configured && session && needsPasswordUpdate && (
           <section className="login-panel">
-            <form className="login-card" onSubmit={handleSignIn}>
-              <h2>Sign in</h2>
+            <form className="login-card" onSubmit={handleUpdatePassword}>
+              <h2>Set new password</h2>
+              <p>
+                Create a password for this account. After this, you can sign in with your email and password.
+              </p>
               <input
-                type="email"
-                value={email}
-                onChange={event => setEmail(event.target.value)}
-                placeholder="Email"
-                autoComplete="email"
+                type="password"
+                value={newPassword}
+                onChange={event => setNewPassword(event.target.value)}
+                placeholder="New password"
+                autoComplete="new-password"
                 autoFocus
               />
               <input
                 type="password"
-                value={password}
-                onChange={event => setPassword(event.target.value)}
-                placeholder="Password"
-                autoComplete="current-password"
+                value={newPasswordConfirm}
+                onChange={event => setNewPasswordConfirm(event.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
               />
-              <button className="btn-primary" type="submit" disabled={authBusy || !email || !password}>
-                {authBusy ? 'Signing in...' : 'Sign in'}
+              <button className="btn-primary" type="submit" disabled={authBusy || !newPassword || !newPasswordConfirm}>
+                {authBusy ? 'Saving...' : 'Save password'}
               </button>
-              {authMessage && <span className="login-message">{authMessage}</span>}
+              {passwordUpdateMessage && <span className="login-message">{passwordUpdateMessage}</span>}
             </form>
+          </section>
+        )}
+
+        {supabaseStatus.configured && session && !needsPasswordUpdate && <CloudEventYearList onOpenYear={onOpenCloudYear} />}
+
+        {supabaseStatus.configured && !session && (
+          <section className="login-panel">
+            {!showRecovery ? (
+              <form className="login-card" onSubmit={handleSignIn}>
+                <h2>Sign in</h2>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={event => setEmail(event.target.value)}
+                  placeholder="Email"
+                  autoComplete="email"
+                  autoFocus
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={event => setPassword(event.target.value)}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                />
+                <button className="btn-primary" type="submit" disabled={authBusy || !email || !password}>
+                  {authBusy ? 'Signing in...' : 'Sign in'}
+                </button>
+                <button
+                  className="login-link"
+                  type="button"
+                  onClick={() => {
+                    setShowRecovery(true);
+                    setRecoveryEmail(email);
+                    setAuthMessage(null);
+                  }}
+                >
+                  Forgot or create password?
+                </button>
+                {authMessage && <span className="login-message">{authMessage}</span>}
+              </form>
+            ) : (
+              <form className="login-card" onSubmit={handleSendRecovery}>
+                <h2>Reset password</h2>
+                <p>
+                  Enter your email and we will send a password reset link. The link opens Generator and asks you
+                  to create a new password.
+                </p>
+                <input
+                  type="email"
+                  value={recoveryEmail}
+                  onChange={event => setRecoveryEmail(event.target.value)}
+                  placeholder="Email"
+                  autoComplete="email"
+                  autoFocus
+                />
+                <button className="btn-primary" type="submit" disabled={authBusy || !recoveryEmail}>
+                  {authBusy ? 'Sending...' : 'Send reset link'}
+                </button>
+                <button
+                  className="login-link"
+                  type="button"
+                  onClick={() => {
+                    setShowRecovery(false);
+                    setRecoveryMessage(null);
+                  }}
+                >
+                  Back to sign in
+                </button>
+                {recoveryMessage && <span className="login-message">{recoveryMessage}</span>}
+              </form>
+            )}
           </section>
         )}
 

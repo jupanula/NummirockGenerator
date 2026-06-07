@@ -5,6 +5,7 @@ import {
   saveCloudBandAssets,
   type CloudBandDetail,
 } from '../supabase/bands';
+import { formatSupabaseError } from '../supabase/client';
 import {
   COMPOSITE_H,
   COMPOSITE_W,
@@ -223,7 +224,7 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save band assets.');
+      setError(formatSupabaseError(err, 'Could not save band assets.'));
     } finally {
       setSaving(false);
     }
@@ -240,7 +241,7 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
       await deleteCloudBand(eventYearId, bandId);
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete band.');
+      setError(formatSupabaseError(err, 'Could not delete band.'));
     } finally {
       setSaving(false);
     }

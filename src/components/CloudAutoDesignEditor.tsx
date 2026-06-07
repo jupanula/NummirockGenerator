@@ -8,6 +8,7 @@ import {
   renderAutoDesignToCanvas,
 } from '../utils/autoDesignRenderer';
 import { getCloudAutoDesignEditorData, saveCloudAutoDesign } from '../supabase/autoDesigns';
+import { formatSupabaseError } from '../supabase/client';
 import './AutoDesignEditor.css';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -236,7 +237,7 @@ export default function CloudAutoDesignEditor({ eventYearId, designId, canEdit, 
       await saveCloudAutoDesign(eventYearId, designId, design, thumbBlob);
       onBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save cloud design.');
+      setError(formatSupabaseError(err, 'Could not save cloud design.'));
     } finally {
       setSaving(false);
     }

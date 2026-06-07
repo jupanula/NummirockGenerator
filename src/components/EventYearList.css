@@ -115,6 +115,21 @@
   color: #ff8d8d;
 }
 
+.login-link {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 0;
+  text-align: left;
+}
+
+.login-link:hover {
+  text-decoration: underline;
+}
+
 .local-legacy-section {
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.025);

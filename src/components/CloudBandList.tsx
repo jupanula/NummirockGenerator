@@ -20,6 +20,7 @@ import {
   updateCloudBandOrder,
   type CloudBandSummary,
 } from '../supabase/bands';
+import { formatSupabaseError } from '../supabase/client';
 import CloudBandAssetEditor from './CloudBandAssetEditor';
 import './CloudBandList.css';
 
@@ -150,7 +151,7 @@ export default function CloudBandList({ eventYearId, canEdit }: Props) {
       await updateCloudBandOrder(reordered.map(band => band.id));
     } catch (err) {
       setBands(previousBands);
-      setError(err instanceof Error ? err.message : 'Could not save band order.');
+      setError(formatSupabaseError(err, 'Could not save band order.'));
     } finally {
       setReordering(false);
     }

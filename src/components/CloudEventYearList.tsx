@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabaseConfigured } from '../supabase/client';
+import { formatSupabaseError, supabaseConfigured } from '../supabase/client';
 import {
   createCloudEventYear,
   getCloudEventYears,
@@ -59,7 +59,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
       setYear(new Date().getFullYear());
       setShowForm(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create cloud event year.');
+      setError(formatSupabaseError(err, 'Could not create cloud event year.'));
     } finally {
       setCreating(false);
     }

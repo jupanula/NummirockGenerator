@@ -13,6 +13,7 @@ import {
   type CloudScheduleStageOption,
 } from '../supabase/schedule';
 import { getCloudBands, type CloudBandSummary } from '../supabase/bands';
+import { formatSupabaseError } from '../supabase/client';
 import {
   createCloudScheduleAct,
   deleteCloudScheduleAct,
@@ -277,7 +278,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       setDraft(null);
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save slot.');
+      setError(formatSupabaseError(err, 'Could not save slot.'));
     } finally {
       setSaving(false);
     }
@@ -293,7 +294,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       setDraft(null);
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not clear slot.');
+      setError(formatSupabaseError(err, 'Could not clear slot.'));
     } finally {
       setSaving(false);
     }
@@ -310,7 +311,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       setDraft(null);
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete slot.');
+      setError(formatSupabaseError(err, 'Could not delete slot.'));
     } finally {
       setSaving(false);
     }
@@ -331,7 +332,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       else await assignCloudScheduleBand(slot.id, id);
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not assign slot.');
+      setError(formatSupabaseError(err, 'Could not assign slot.'));
     } finally {
       setSaving(false);
     }
@@ -349,7 +350,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       setNewActName('');
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not add act.');
+      setError(formatSupabaseError(err, 'Could not add act.'));
     } finally {
       setSaving(false);
     }
@@ -367,7 +368,7 @@ export default function CloudScheduleSummary({ eventYearId, canEdit }: Props) {
       await deleteCloudScheduleAct(act.id);
       await loadSchedule();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete act.');
+      setError(formatSupabaseError(err, 'Could not delete act.'));
     } finally {
       setSaving(false);
     }

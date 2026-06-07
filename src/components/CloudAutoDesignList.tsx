@@ -5,6 +5,7 @@ import {
   getCloudAutoDesigns,
   type CloudAutoDesign,
 } from '../supabase/autoDesigns';
+import { formatSupabaseError } from '../supabase/client';
 import { canvasDimensions } from '../utils/autoLayoutEngine';
 import './CloudAutoDesignList.css';
 
@@ -102,7 +103,7 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor, canEdit
       await duplicateCloudAutoDesign(design);
       await loadDesigns();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not duplicate design.');
+      setError(formatSupabaseError(err, 'Could not duplicate design.'));
     } finally {
       setSaving(false);
     }
@@ -117,7 +118,7 @@ export default function CloudAutoDesignList({ eventYearId, onOpenEditor, canEdit
       await deleteCloudAutoDesign(design.id);
       await loadDesigns();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete design.');
+      setError(formatSupabaseError(err, 'Could not delete design.'));
     } finally {
       setSaving(false);
     }

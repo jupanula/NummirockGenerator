@@ -41,3 +41,19 @@ export function getSupabaseConfigStatus() {
     hasPublishableKey: Boolean(supabasePublishableKey),
   };
 }
+
+export function formatSupabaseError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+
+  const normalized = error.message.toLowerCase();
+  if (
+    normalized.includes('row-level security')
+    || normalized.includes('permission denied')
+    || normalized.includes('not authorized')
+    || normalized.includes('unauthorized')
+  ) {
+    return 'You do not have permission to do that with your current Generator role.';
+  }
+
+  return error.message || fallback;
+}
