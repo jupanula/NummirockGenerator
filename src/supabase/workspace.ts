@@ -21,9 +21,15 @@ interface MembershipRow {
 export async function getCurrentWorkspaceMembership(): Promise<WorkspaceMembership | null> {
   if (!supabase) return null;
 
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const userId = userData.user?.id;
+  if (!userId) return null;
+
   const { data, error } = await supabase
     .from('workspace_members')
     .select('role, workspaces(id, name)')
+    .eq('user_id', userId)
     .limit(1)
     .maybeSingle<MembershipRow>();
 

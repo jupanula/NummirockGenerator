@@ -121,6 +121,53 @@
   overflow-wrap: anywhere;
 }
 
+.cloud-account-admin {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.cloud-account-admin a {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cloud-account-admin a:hover {
+  text-decoration: underline;
+}
+
+.cloud-account-admin summary {
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cloud-account-admin ol {
+  color: var(--text-secondary);
+  display: grid;
+  font-size: 12px;
+  gap: 5px;
+  line-height: 1.45;
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+.cloud-account-admin p {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 10px 0 0;
+}
+
+.cloud-account-admin code {
+  color: var(--text-primary);
+}
+
 .cloud-account-actions {
   display: flex;
   gap: 10px;

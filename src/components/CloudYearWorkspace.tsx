@@ -12,6 +12,8 @@ import EnvironmentBadge from './EnvironmentBadge';
 import './YearWorkspace.css';
 import './CloudYearWorkspace.css';
 
+const SUPABASE_AUTH_USERS_URL = 'https://supabase.com/dashboard/project/jgkibfvcfuefnarulhkt/auth/users';
+
 interface Props {
   yearId: string;
   yearName: string;
@@ -146,6 +148,27 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
               <span>Role</span>
               <strong>{membership?.role ?? 'Loading...'}</strong>
             </div>
+            {membership?.role === 'owner' && (
+              <div className="cloud-account-admin">
+                <a href={SUPABASE_AUTH_USERS_URL} target="_blank" rel="noreferrer">
+                  Manage users in Supabase
+                </a>
+                <details>
+                  <summary>Instructions</summary>
+                  <ol>
+                    <li>Create or invite the user in Supabase Authentication.</li>
+                    <li>Copy the new user UID from the Auth Users page.</li>
+                    <li>Open Table Editor and add a row to <code>workspace_members</code>.</li>
+                    <li>Use the Nummirock workspace id, the copied user id, and role <code>editor</code> or <code>viewer</code>.</li>
+                    <li>Use <code>owner</code> only for people who may delete years and manage settings.</li>
+                  </ol>
+                  <p>
+                    Keep Supabase service-role keys out of GitHub and out of the browser. Generator only needs
+                    publishable client keys; app access is controlled by <code>workspace_members</code>.
+                  </p>
+                </details>
+              </div>
+            )}
             <div className="cloud-account-actions">
               <button className="btn-secondary" type="button" onClick={() => setAccountOpen(false)}>
                 Close
