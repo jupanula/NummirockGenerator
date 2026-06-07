@@ -43,18 +43,24 @@
 
 .cloud-band-row {
   display: grid;
-  grid-template-columns: 24px 34px minmax(130px, 1fr) auto;
+  grid-template-columns: 24px 34px minmax(130px, 1fr);
   gap: 8px;
   align-items: center;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 5px;
+  color: inherit;
+  cursor: pointer;
   padding: 8px 10px;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.cloud-band-row.editing {
-  border-color: rgba(230, 0, 126, 0.45);
-  background: rgba(230, 0, 126, 0.05);
+.cloud-band-row:hover,
+.cloud-band-row:focus-visible {
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
+  outline: none;
 }
 
 .cloud-band-row.dragging {
@@ -97,61 +103,11 @@
   font-weight: 600;
 }
 
-.cloud-band-name-input {
-  width: 100%;
-  min-width: 0;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 7px 9px;
-  font-size: 13px;
-}
-
-.cloud-band-edit {
-  font-size: 11px;
-  padding: 4px 8px;
-}
-
-.cloud-band-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
 .cloud-band-tags {
   grid-column: 3;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-}
-
-.cloud-band-edit-controls {
-  grid-column: 3 / 5;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cloud-band-edit-controls label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 9px;
-  font-size: 11px;
-}
-
-.cloud-band-edit-controls input {
-  accent-color: var(--accent);
-}
-
-.cloud-band-edit-controls button {
-  font-size: 11px;
-  padding: 5px 10px;
 }
 
 .cloud-band-tags span {
@@ -170,4 +126,21 @@
 .cloud-band-tags .missing {
   color: #ff8d8d;
   border-color: rgba(255, 141, 141, 0.35);
+}
+
+.cloud-band-modal {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.76);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 100;
+}
+
+.cloud-band-modal-inner {
+  max-height: 94vh;
+  max-width: 940px;
+  width: 100%;
 }

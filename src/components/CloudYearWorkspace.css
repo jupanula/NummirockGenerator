@@ -1,12 +1,60 @@
-.cloud-workspace-badge {
+.cloud-workspace-header {
+  gap: 16px;
+  min-height: 81px;
+  padding: 20px 32px;
+}
+
+.cloud-workspace-logo {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  display: flex;
+  padding: 0;
+}
+
+.cloud-workspace-logo img {
+  display: block;
+  height: 40px;
+  width: auto;
+}
+
+.cloud-workspace-brand {
   color: var(--accent);
-  border: 1px solid rgba(230, 0, 126, 0.45);
-  border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 11px;
-  line-height: 1;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+
+.cloud-workspace-header .workspace-tabs {
+  flex: 1;
+  justify-content: center;
+}
+
+.cloud-workspace-header-right {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.cloud-account-avatar {
+  align-items: center;
+  background: rgba(230, 0, 126, 0.14);
+  border: 1px solid rgba(230, 0, 126, 0.6);
+  border-radius: 999px;
+  color: var(--text-primary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.cloud-account-avatar:hover {
+  background: rgba(230, 0, 126, 0.28);
 }
 
 .cloud-workspace-content {
@@ -23,4 +71,76 @@
 
 .cloud-workspace-content .cloud-schedule {
   width: 100%;
+}
+
+.cloud-account-modal {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 100;
+}
+
+.cloud-account-modal-box {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(230, 0, 126, 0.55);
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
+  padding: 24px;
+  width: 100%;
+}
+
+.cloud-account-modal-box h2 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.cloud-account-row {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+}
+
+.cloud-account-row span {
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.cloud-account-row strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.cloud-account-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .cloud-workspace-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cloud-workspace-header .workspace-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .cloud-workspace-header-right {
+    position: absolute;
+    right: 20px;
+    top: 23px;
+  }
 }

@@ -1,9 +1,5 @@
 .cloud-years {
-  border: 1px solid rgba(230, 0, 126, 0.35);
-  background: rgba(230, 0, 126, 0.06);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .cloud-years-header {
@@ -12,10 +8,6 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 12px;
-}
-
-.cloud-years-header > button {
-  flex: 0 0 auto;
 }
 
 .cloud-years h2 {
@@ -62,10 +54,21 @@
 }
 
 .cloud-year-card {
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  padding: 18px 20px;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+  width: 100%;
+}
+
+.cloud-year-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-focus);
 }
 
 .cloud-year-card-top {
@@ -80,14 +83,6 @@
   display: flex;
   align-items: baseline;
   gap: 12px;
-}
-
-.cloud-year-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 .cloud-year-number {
@@ -116,18 +111,6 @@
   font-size: 11px;
 }
 
-.cloud-year-open {
-  font-size: 11px;
-  padding: 5px 10px;
-  flex: 0 0 auto;
-}
-
-.cloud-year-delete {
-  font-size: 11px;
-  padding: 5px 9px;
-  flex: 0 0 auto;
-}
-
 @media (max-width: 760px) {
   .cloud-years-header,
   .cloud-year-card-top {
@@ -138,7 +121,4 @@
     grid-template-columns: 1fr;
   }
 
-  .cloud-year-actions {
-    justify-content: flex-start;
-  }
 }

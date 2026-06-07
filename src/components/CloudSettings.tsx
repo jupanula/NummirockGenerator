@@ -15,6 +15,11 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  deleteCloudEventYear,
+  getCloudEventYears,
+  type CloudEventYearSummary,
+} from '../supabase/eventYears';
+import {
   createCloudStage,
   deleteCloudStage,
   getCloudStages,
@@ -112,6 +117,7 @@ function CloudStageRow({
 
 export default function CloudSettings({ eventYearId, canEdit }: Props) {
   const [settings, setSettings] = useState<CloudYearSettings | null>(null);
+  const [yearSummary, setYearSummary] = useState<CloudEventYearSummary | null>(null);
   const [stages, setStages] = useState<CloudStage[]>([]);
   const [separatorColor, setSeparatorColor] = useState('#E6007E');
   const [separatorChar, setSeparatorChar] = useState('■');
@@ -120,11 +126,13 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
   const [newStageName, setNewStageName] = useState('');
+  const [newStageLogo, setNewStageLogo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [savingDates, setSavingDates] = useState(false);
   const [savingStages, setSavingStages] = useState(false);
   const [uploadingStageId, setUploadingStageId] = useState<string | null>(null);
+  const [deletingYear, setDeletingYear] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [datesSaved, setDatesSaved] = useState(false);
@@ -141,7 +149,9 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
         getCloudYearSettings(eventYearId),
         getCloudStages(eventYearId),
       ]);
+      const nextYearSummary = (await getCloudEventYears()).find(year => year.id === eventYearId) ?? null;
       setSettings(nextSettings);
+      setYearSummary(nextYearSummary);
       setStages(nextStages);
       if (nextSettings) {
         setSeparatorColor(nextSettings.separatorColor);
@@ -214,8 +224,14 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
     setError(null);
     try {
       const stage = await createCloudStage(eventYearId, name, stages.length);
-      setStages(current => [...current, stage]);
+      let nextStage = stage;
+      if (newStageLogo) {
+        const logoAssetId = await uploadCloudStageLogo(eventYearId, stage.id, newStageLogo);
+        nextStage = { ...stage, hasLogo: true, logoAssetId };
+      }
+      setStages(current => [...current, nextStage]);
       setNewStageName('');
+      setNewStageLogo(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not add stage.');
     } finally {
@@ -306,6 +322,30 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
     }
   }
 
+  async function removeEventYear() {
+    if (!canEdit || !settings) return;
+    const summary = yearSummary;
+    const ok = confirm(
+      `Delete ${settings.name} and all of its cloud data?\n\nThis will permanently delete:\n` +
+      `- ${summary?.bands ?? 'All'} bands and uploaded band assets\n` +
+      `- ${summary?.autoDesigns ?? 'All'} auto-designs\n` +
+      `- ${summary?.slots ?? 'All'} schedule slots\n` +
+      `- ${summary?.stages ?? 'All'} stages and stage logos\n\n` +
+      'This cannot be undone.'
+    );
+    if (!ok) return;
+
+    setDeletingYear(true);
+    setError(null);
+    try {
+      await deleteCloudEventYear(eventYearId);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not delete event year.');
+      setDeletingYear(false);
+    }
+  }
+
   if (loading) return <div className="cloud-settings-state">Loading cloud settings...</div>;
 
   return (
@@ -377,6 +417,14 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
             placeholder="Stage name"
             onChange={e => setNewStageName(e.target.value)}
           />
+          <label className="btn-secondary cloud-stage-new-logo">
+            {newStageLogo ? newStageLogo.name : 'Logo'}
+            <input
+              type="file"
+              accept=".svg,image/svg+xml,image/png"
+              onChange={e => setNewStageLogo(e.target.files?.[0] ?? null)}
+            />
+          </label>
           <button className="btn-secondary" type="submit" disabled={savingStages || !newStageName.trim()}>
             Add stage
           </button>
@@ -440,6 +488,19 @@ export default function CloudSettings({ eventYearId, canEdit }: Props) {
           {savingSettings ? 'Saving...' : saved ? 'Saved' : 'Save settings'}
         </button>}
       </section>
+
+      {canEdit && (
+        <section className="cloud-settings-section cloud-danger-zone">
+          <h3>Danger Zone</h3>
+          <p className="cloud-settings-hint">
+            Delete this event year only when you are certain it is no longer needed.
+            This removes the year, bands, designs, schedule, stages and uploaded assets from Supabase.
+          </p>
+          <button className="btn-danger" onClick={removeEventYear} disabled={deletingYear}>
+            {deletingYear ? 'Deleting event year...' : `Delete ${settings?.name ?? 'event year'}`}
+          </button>
+        </section>
+      )}
     </div>
   );
 }

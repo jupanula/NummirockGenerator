@@ -55,6 +55,8 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [logoDragOver, setLogoDragOver] = useState(false);
+  const [photoDragOver, setPhotoDragOver] = useState(false);
   const [logoScale, setLogoScale] = useState(1);
   const [logoOffsetX, setLogoOffsetX] = useState(0);
   const [logoOffsetY, setLogoOffsetY] = useState(0);
@@ -172,6 +174,20 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
     });
   }
 
+  function handleLogoDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setLogoDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) setLogo(file);
+  }
+
+  function handlePhotoDrop(event: React.DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setPhotoDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) setPhoto(file);
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const trimmedName = name.trim();
@@ -287,10 +303,19 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
           <div className="band-form-files">
             <div className="field">
               <label>Logo (SVG/PNG) *</label>
-              <div className="file-drop-zone" onClick={() => document.getElementById(logoInputId)?.click()}>
+              <div
+                className={`file-drop-zone${logoDragOver ? ' drag-over' : ''}`}
+                onClick={() => document.getElementById(logoInputId)?.click()}
+                onDragOver={event => {
+                  event.preventDefault();
+                  setLogoDragOver(true);
+                }}
+                onDragLeave={() => setLogoDragOver(false)}
+                onDrop={handleLogoDrop}
+              >
                 {logoPreview
                   ? <img src={logoPreview} alt="Logo" className="file-preview-logo" />
-                  : <span>Click to upload logo</span>
+                  : <span>Click or drop logo here</span>
                 }
               </div>
               <input
@@ -307,10 +332,19 @@ export default function CloudBandAssetEditor({ eventYearId, bandId, order, onClo
 
             <div className="field">
               <label>Photo (PNG/JPG) *</label>
-              <div className="file-drop-zone" onClick={() => document.getElementById(photoInputId)?.click()}>
+              <div
+                className={`file-drop-zone${photoDragOver ? ' drag-over' : ''}`}
+                onClick={() => document.getElementById(photoInputId)?.click()}
+                onDragOver={event => {
+                  event.preventDefault();
+                  setPhotoDragOver(true);
+                }}
+                onDragLeave={() => setPhotoDragOver(false)}
+                onDrop={handlePhotoDrop}
+              >
                 {photoPreview
                   ? <img src={photoPreview} alt="Photo" className="file-preview-photo" />
-                  : <span>Click to upload photo</span>
+                  : <span>Click or drop photo here</span>
                 }
               </div>
               <input

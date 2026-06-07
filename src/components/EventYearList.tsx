@@ -1,13 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import type { EventYear } from '../types';
 import { exportBackup, importBackup } from '../utils/dbBackup';
 import EnvironmentBadge from './EnvironmentBadge';
-import SupabaseStatus from './SupabaseStatus';
 import CloudEventYearList from './CloudEventYearList';
 import type { CloudEventYearSummary } from '../supabase/eventYears';
-import { supabaseConfigured } from '../supabase/client';
+import { getSupabaseConfigStatus, supabase } from '../supabase/client';
+import { getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
 import './EventYearList.css';
 
 interface Props {
@@ -16,13 +17,83 @@ interface Props {
 }
 
 export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) {
+  const supabaseStatus = getSupabaseConfigStatus();
   const years = useLiveQuery(() => db.eventYears.orderBy('year').reverse().toArray(), []);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [backupState, setBackupState] = useState<'idle' | 'working' | 'done' | 'error'>('idle');
-  const [showLocalWorkspace, setShowLocalWorkspace] = useState(!supabaseConfigured);
+  const [showLocalWorkspace, setShowLocalWorkspace] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
+  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  async function loadMembership() {
+    if (!supabase) return;
+    setMembershipError(null);
+    try {
+      setMembership(await getCurrentWorkspaceMembership());
+    } catch (err) {
+      setMembership(null);
+      setMembershipError(err instanceof Error ? err.message : 'Could not load workspace.');
+    }
+  }
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setSession(data.session);
+      if (data.session) void loadMembership();
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setMembership(null);
+      setMembershipError(null);
+      setAccountOpen(false);
+      if (nextSession) void loadMembership();
+    });
+
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleSignIn(event: React.FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+    setAuthBusy(true);
+    setAuthMessage(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    setAuthBusy(false);
+    if (error) {
+      setAuthMessage(error.message);
+    } else {
+      setPassword('');
+      setAuthMessage(null);
+    }
+  }
+
+  async function handleSignOut() {
+    if (!supabase) return;
+    setAuthBusy(true);
+    await supabase.auth.signOut();
+    setMembership(null);
+    setAuthBusy(false);
+  }
 
   async function handleExport() {
     setBackupState('working');
@@ -83,35 +154,88 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
         <h1>Generator</h1>
         <div className="year-list-header-right">
           <EnvironmentBadge />
+          {session && (
+            <button
+              className="account-avatar"
+              type="button"
+              aria-label="Open account"
+              onClick={() => setAccountOpen(true)}
+            >
+              {(session.user.email ?? '?').slice(0, 1).toUpperCase()}
+            </button>
+          )}
         </div>
       </header>
 
       <main className="year-list-main">
-        <SupabaseStatus />
-        <CloudEventYearList onOpenYear={onOpenCloudYear} />
+        {supabaseStatus.configured && session && <CloudEventYearList onOpenYear={onOpenCloudYear} />}
+
+        {supabaseStatus.configured && !session && (
+          <section className="login-panel">
+            <form className="login-card" onSubmit={handleSignIn}>
+              <h2>Sign in</h2>
+              <input
+                type="email"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+                placeholder="Email"
+                autoComplete="email"
+                autoFocus
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                placeholder="Password"
+                autoComplete="current-password"
+              />
+              <button className="btn-primary" type="submit" disabled={authBusy || !email || !password}>
+                {authBusy ? 'Signing in...' : 'Sign in'}
+              </button>
+              {authMessage && <span className="login-message">{authMessage}</span>}
+            </form>
+          </section>
+        )}
+
+        {!supabaseStatus.configured && (
+          <section className="login-panel">
+            <div className="login-card">
+              <h2>Cloud database unavailable</h2>
+              <p>
+                {!supabaseStatus.hasUrl
+                  ? 'VITE_SUPABASE_URL is missing.'
+                  : !supabaseStatus.hasValidUrl
+                    ? 'VITE_SUPABASE_URL is not a valid HTTP or HTTPS URL.'
+                    : 'VITE_SUPABASE_PUBLISHABLE_KEY is missing.'}
+              </p>
+            </div>
+          </section>
+        )}
 
         <section className="local-legacy-section">
           <div className="local-legacy-head">
             <div>
               <h2>Local Backup Workspace</h2>
-              <p>IndexedDB data on this browser. Use this for JSON backup/import or emergency local access.</p>
             </div>
             <div className="year-list-actions">
-              <button className="btn-secondary" onClick={handleExport} disabled={backupState === 'working'}>
-                {backupState === 'working' ? 'Exporting…' : backupState === 'done' ? 'Saved!' : backupState === 'error' ? 'Error' : 'Export JSON'}
-              </button>
-              <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={backupState === 'working'}>
-                {backupState === 'working' ? 'Importing…' : backupState === 'done' ? 'Done!' : backupState === 'error' ? 'Error' : 'Import JSON'}
-              </button>
-              <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
               <button className="btn-ghost" onClick={() => setShowLocalWorkspace(open => !open)}>
-                {showLocalWorkspace ? 'Hide local years' : 'Show local years'}
+                {showLocalWorkspace ? 'Close' : 'Open'}
               </button>
             </div>
           </div>
 
           {showLocalWorkspace && (
             <>
+              <div className="local-backup-actions">
+                <button className="btn-secondary" onClick={handleExport} disabled={backupState === 'working'}>
+                  {backupState === 'working' ? 'Exporting…' : backupState === 'done' ? 'Saved!' : backupState === 'error' ? 'Error' : 'Export JSON'}
+                </button>
+                <button className="btn-secondary" onClick={() => importInputRef.current?.click()} disabled={backupState === 'working'}>
+                  {backupState === 'working' ? 'Importing…' : backupState === 'done' ? 'Done!' : backupState === 'error' ? 'Error' : 'Import JSON'}
+                </button>
+                <input ref={importInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImport} />
+              </div>
+
               <div className="year-list-top local-years-top">
                 <h2>Local Event Years</h2>
                 <button className="btn-secondary" onClick={() => setShowForm(true)}>
@@ -180,6 +304,31 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
           )}
         </section>
       </main>
+
+      {accountOpen && session && (
+        <div className="account-modal" onClick={() => setAccountOpen(false)}>
+          <div className="account-modal-box" onClick={event => event.stopPropagation()}>
+            <h2>Account</h2>
+            <div className="account-row">
+              <span>Email</span>
+              <strong>{session.user.email}</strong>
+            </div>
+            <div className="account-row">
+              <span>Role</span>
+              <strong>{membership?.role ?? (membershipError ? 'Unavailable' : 'Loading...')}</strong>
+            </div>
+            {membershipError && <p className="account-error">{membershipError}</p>}
+            <div className="account-actions">
+              <button className="btn-secondary" type="button" onClick={() => setAccountOpen(false)}>
+                Close
+              </button>
+              <button className="btn-ghost" type="button" onClick={handleSignOut} disabled={authBusy}>
+                {authBusy ? 'Signing out...' : 'Sign out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

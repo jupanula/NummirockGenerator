@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import type { CloudTab, NavState } from '../types';
+import { supabase } from '../supabase/client';
 import { canEditWorkspace, getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
 import CloudAutoDesignEditor from './CloudAutoDesignEditor';
 import CloudAutoDesignList from './CloudAutoDesignList';
@@ -22,10 +24,18 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
   const [editingDesignId, setEditingDesignId] = useState<string | undefined>(undefined);
   const [editingDesign, setEditingDesign] = useState(false);
   const [membership, setMembership] = useState<WorkspaceMembership | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const canEdit = canEditWorkspace(membership);
 
   useEffect(() => {
     let cancelled = false;
+    if (supabase) {
+      supabase.auth.getSession().then(({ data }) => {
+        if (!cancelled) setSession(data.session);
+      });
+    }
     getCurrentWorkspaceMembership()
       .then(nextMembership => {
         if (!cancelled) setMembership(nextMembership);
@@ -37,6 +47,14 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
       cancelled = true;
     };
   }, []);
+
+  async function handleSignOut() {
+    if (!supabase) return;
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    setSigningOut(false);
+    onNavigate({ view: 'home' });
+  }
 
   const tabs: { id: CloudTab; label: string }[] = [
     { id: 'bands', label: 'Bands' },
@@ -61,20 +79,15 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
 
   return (
     <div className="workspace cloud-workspace">
-      <header className="workspace-header">
+      <header className="workspace-header cloud-workspace-header">
         <button
-          className="btn-ghost workspace-back"
+          className="cloud-workspace-logo"
           onClick={() => onNavigate({ view: 'home' })}
+          aria-label="Back to event years"
         >
-          ← All Years
+          <img src="./assets/Nummirock-logo.svg" alt="Nummirock" />
         </button>
-        <div className="workspace-title">
-          <span className="workspace-year">{year}</span>
-          <span className="workspace-name">{yearName}</span>
-          <span className="cloud-workspace-badge">Cloud sync</span>
-          {membership && <span className="cloud-workspace-badge">{membership.role}</span>}
-          <EnvironmentBadge />
-        </div>
+        <h1 className="cloud-workspace-brand">{year}</h1>
         <nav className="workspace-tabs">
           {tabs.map(t => (
             <button
@@ -90,6 +103,19 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
             </button>
           ))}
         </nav>
+        <div className="cloud-workspace-header-right">
+          <EnvironmentBadge />
+          {session && (
+            <button
+              className="cloud-account-avatar"
+              type="button"
+              aria-label="Open account"
+              onClick={() => setAccountOpen(true)}
+            >
+              {(session.user.email ?? '?').slice(0, 1).toUpperCase()}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="workspace-content cloud-workspace-content">
@@ -107,6 +133,30 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
         {tab === 'scheduler' && <CloudScheduleSummary eventYearId={yearId} canEdit={canEdit} />}
         {tab === 'settings' && <CloudSettings eventYearId={yearId} canEdit={canEdit} />}
       </main>
+
+      {accountOpen && session && (
+        <div className="cloud-account-modal" onClick={() => setAccountOpen(false)}>
+          <div className="cloud-account-modal-box" onClick={event => event.stopPropagation()}>
+            <h2>Account</h2>
+            <div className="cloud-account-row">
+              <span>Email</span>
+              <strong>{session.user.email}</strong>
+            </div>
+            <div className="cloud-account-row">
+              <span>Role</span>
+              <strong>{membership?.role ?? 'Loading...'}</strong>
+            </div>
+            <div className="cloud-account-actions">
+              <button className="btn-secondary" type="button" onClick={() => setAccountOpen(false)}>
+                Close
+              </button>
+              <button className="btn-ghost" type="button" onClick={handleSignOut} disabled={signingOut}>
+                {signingOut ? 'Signing out...' : 'Sign out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

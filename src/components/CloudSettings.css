@@ -28,6 +28,11 @@
   padding: 18px;
 }
 
+.cloud-danger-zone {
+  border-color: rgba(204, 51, 51, 0.55);
+  background: rgba(204, 51, 51, 0.06);
+}
+
 .cloud-settings-section-head {
   display: flex;
   align-items: flex-start;
@@ -191,9 +196,25 @@
 
 .cloud-stage-add {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
   gap: 8px;
   margin-top: 12px;
+}
+
+.cloud-stage-new-logo {
+  cursor: pointer;
+  max-width: 180px;
+  overflow: hidden;
+  position: relative;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloud-stage-new-logo input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .cloud-settings-field {

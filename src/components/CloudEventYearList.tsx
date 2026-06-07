@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabaseConfigured } from '../supabase/client';
 import {
   createCloudEventYear,
-  deleteCloudEventYear,
   getCloudEventYears,
   type CloudEventYearSummary,
 } from '../supabase/eventYears';
@@ -18,7 +17,6 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [year, setYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
@@ -60,28 +58,10 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
       setName('');
       setYear(new Date().getFullYear());
       setShowForm(false);
-      onOpenYear(created);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create cloud event year.');
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function handleDelete(yearItem: CloudEventYearSummary) {
-    const ok = confirm(
-      `Delete ${yearItem.name} and all of its cloud bands, designs, schedule, stages and uploaded assets? This cannot be undone.`
-    );
-    if (!ok) return;
-    setDeletingId(yearItem.id);
-    setError(null);
-    try {
-      await deleteCloudEventYear(yearItem.id);
-      setYears(current => current.filter(y => y.id !== yearItem.id));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete cloud event year.');
-    } finally {
-      setDeletingId(null);
     }
   }
 
@@ -98,9 +78,6 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
               : 'You have view-only access in this workspace.'}
           </p>
         </div>
-        <button className="btn-secondary" onClick={loadYears} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
         {canEdit && (
           <button className="btn-primary" onClick={() => setShowForm(true)}>
             + New Year
@@ -151,28 +128,11 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
 
       <div className="cloud-year-cards">
         {years.map(year => (
-          <div className="cloud-year-card" key={year.id}>
+          <button className="cloud-year-card" key={year.id} onClick={() => onOpenYear(year)}>
             <div className="cloud-year-card-top">
               <div className="cloud-year-main">
                 <span className="cloud-year-number">{year.year}</span>
                 <span className="cloud-year-name">{year.name}</span>
-              </div>
-              <div className="cloud-year-actions">
-                <button
-                  className="btn-primary cloud-year-open"
-                  onClick={() => onOpenYear(year)}
-                >
-                  Open workspace
-                </button>
-                {canEdit && (
-                  <button
-                    className="btn-danger cloud-year-delete"
-                    onClick={() => void handleDelete(year)}
-                    disabled={deletingId === year.id}
-                  >
-                    {deletingId === year.id ? 'Deleting...' : 'Delete'}
-                  </button>
-                )}
               </div>
             </div>
             <div className="cloud-year-stats">
@@ -181,7 +141,7 @@ export default function CloudEventYearList({ onOpenYear }: Props) {
               <span>{year.slots} slots</span>
               <span>{year.autoDesigns} auto-designs</span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </section>
