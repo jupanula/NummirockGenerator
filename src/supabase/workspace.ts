@@ -31,6 +31,13 @@ export function getWorkspacePermissions(membership: WorkspaceMembership | null):
   };
 }
 
+export function getWorkspaceRoleDescription(role: WorkspaceMembership['role'] | undefined): string {
+  if (role === 'owner') return 'Full access to years, settings, bands, designs, schedules, exports and deletion.';
+  if (role === 'editor') return 'Can edit bands and schedules, and export designs and schedules. Cannot manage years, settings or designs.';
+  if (role === 'viewer') return 'Can view event data and export designs and schedules. Cannot create, edit or delete data.';
+  return 'Role is loading.';
+}
+
 interface MembershipRow {
   role: 'owner' | 'editor' | 'viewer';
   workspaces: {

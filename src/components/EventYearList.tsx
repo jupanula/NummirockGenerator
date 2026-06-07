@@ -8,7 +8,7 @@ import EnvironmentBadge from './EnvironmentBadge';
 import CloudEventYearList from './CloudEventYearList';
 import type { CloudEventYearSummary } from '../supabase/eventYears';
 import { getSupabaseConfigStatus, supabase } from '../supabase/client';
-import { getCurrentWorkspaceMembership, type WorkspaceMembership } from '../supabase/workspace';
+import { getCurrentWorkspaceMembership, getWorkspaceRoleDescription, type WorkspaceMembership } from '../supabase/workspace';
 import './EventYearList.css';
 
 const SUPABASE_AUTH_USERS_URL = 'https://supabase.com/dashboard/project/jgkibfvcfuefnarulhkt/auth/users';
@@ -318,6 +318,7 @@ export default function EventYearList({ onSelectYear, onOpenCloudYear }: Props) 
             <div className="account-row">
               <span>Role</span>
               <strong>{membership?.role ?? (membershipError ? 'Unavailable' : 'Loading...')}</strong>
+              <em>{getWorkspaceRoleDescription(membership?.role)}</em>
             </div>
             {membershipError && <p className="account-error">{membershipError}</p>}
             {membership?.role === 'owner' && (

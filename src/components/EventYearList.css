@@ -276,6 +276,13 @@
   overflow-wrap: anywhere;
 }
 
+.account-row em {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
 .account-error {
   color: #ff8d8d;
   font-size: 12px;

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { CloudTab, NavState } from '../types';
 import { supabase } from '../supabase/client';
-import { getCurrentWorkspaceMembership, getWorkspacePermissions, type WorkspaceMembership } from '../supabase/workspace';
+import { getCurrentWorkspaceMembership, getWorkspacePermissions, getWorkspaceRoleDescription, type WorkspaceMembership } from '../supabase/workspace';
 import CloudAutoDesignEditor from './CloudAutoDesignEditor';
 import CloudAutoDesignList from './CloudAutoDesignList';
 import CloudBandList from './CloudBandList';
@@ -149,6 +149,7 @@ export default function CloudYearWorkspace({ yearId, yearName, year, tab, onNavi
             <div className="cloud-account-row">
               <span>Role</span>
               <strong>{membership?.role ?? 'Loading...'}</strong>
+              <em>{getWorkspaceRoleDescription(membership?.role)}</em>
             </div>
             {membership?.role === 'owner' && (
               <div className="cloud-account-admin">
